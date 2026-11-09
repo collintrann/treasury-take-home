@@ -62,7 +62,7 @@ Trade-offs:
 - More labels go to needs review, since every disagreement does.
 - The wait is set by the slower of the two readers.
 
-If only one reader answers in time, its results stand, except that the faster second reader alone can't pass anything about the warning beyond its presence. If neither answers, the agent sees "We couldn't read this label right now. Please try again in a minute."
+If only one reader answers in time, its results stand, except that the faster second reader alone can't pass anything about the warning beyond its presence. So when only the first reader answers, its reading alone can pass the warning. That is the risk the second reading guards against. It was kept because the first reader is the more accurate model and, with a 15-second cutoff, a reading rarely misses it. If neither answers, the agent sees "We couldn't read this label right now. Please try again in a minute."
 
 ## Unclear photos
 
