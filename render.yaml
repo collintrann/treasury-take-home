@@ -1,0 +1,11 @@
+# One-click deploy on Render: New > Blueprint > pick this repo.
+# Set ANTHROPIC_API_KEY in the dashboard; without it the app runs in offline-OCR mode.
+services:
+  - type: web
+    name: label-check
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
