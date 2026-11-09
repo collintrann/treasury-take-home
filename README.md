@@ -4,6 +4,8 @@ AI-Assisted review for alcohol label applications. Checks each label against the
 
 **Live demo:** https://treasury-take-home-flame.vercel.app
 
+The web page runs on Vercel and the checking service runs on DigitalOcean.
+
 The demo opens on a review queue of 25 sample applications. Checks run when an application is opened.
 
 ![An application in the review queue with a misspelled government warning flagged](docs/screenshot.png)
@@ -48,6 +50,14 @@ cd web && npm run lint && npm run build
 ```
 
 The backend tests cover every checking rule, the two-reading merge, the queue and the API errors. They use stand-ins for the models, so they need no API key or network.
+
+## Deployment
+
+The app is two services, and both deploy automatically when `main` changes.
+
+The web page runs on Vercel, with `web/` as the project's root directory. It needs two environment variables. `CHECKER_URL` is the checking service's address, and `CHECKER_SECRET` is a shared secret.
+
+The checking service runs on DigitalOcean App Platform, built from the `Dockerfile` in the repository root. It needs `ANTHROPIC_API_KEY` and the same `CHECKER_SECRET`. The service refuses any API call without that secret, so only the Vercel server can use it. When it starts, it reads one sample label to prepare the models, so the first agent's check isn't slow.
 
 ## How it works
 
