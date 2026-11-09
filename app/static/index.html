@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Label Check</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <h1>Label Check</h1>
+      <p class="tagline">Compare an alcohol label against its application</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <nav class="tabs" role="tablist" aria-label="Mode">
+      <button role="tab" id="tab-single" aria-selected="true" aria-controls="panel-single">Check one label</button>
+      <button role="tab" id="tab-batch" aria-selected="false" aria-controls="panel-batch">Check many labels</button>
+    </nav>
+
+    <!-- ============================== SINGLE ============================== -->
+    <section id="panel-single" role="tabpanel" aria-labelledby="tab-single">
+      <form id="single-form" novalidate>
+        <div class="steps">
+          <div class="card">
+            <h2><span class="num">1</span> Label image</h2>
+            <label class="drop" id="drop">
+              <input type="file" id="image" name="image" accept="image/*" required>
+              <img id="preview" alt="" hidden>
+              <span class="drop-text" id="drop-text">
+                <strong>Click to choose a photo</strong><br>or drag it here
+              </span>
+            </label>
+            <p class="examples">Try an example:
+              <select id="example">
+                <option value="">— choose a sample label —</option>
+              </select>
+            </p>
+          </div>
+
+          <div class="card">
+            <h2><span class="num">2</span> What the application says</h2>
+            <p class="hint">Fill in what you have. Blank fields are skipped. The government warning is always checked.</p>
+            <div class="fields">
+              <label>Brand name <input name="brand_name" autocomplete="off" placeholder="OLD TOM DISTILLERY"></label>
+              <label>Class / type <input name="class_type" autocomplete="off" placeholder="Kentucky Straight Bourbon Whiskey"></label>
+              <label>Alcohol content <input name="alcohol_content" autocomplete="off" placeholder="45% Alc./Vol. (90 Proof)"></label>
+              <label>Net contents <input name="net_contents" autocomplete="off" placeholder="750 mL"></label>
+              <label class="wide">Bottler / producer name and address <input name="producer_name_address" autocomplete="off" placeholder="Bottled by Old Tom Distillery, Bardstown, KY"></label>
+              <label>Country of origin <span class="opt">(imports only)</span> <input name="country_of_origin" autocomplete="off" placeholder="Scotland"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="primary" id="check-btn">Check label</button>
+          <button type="button" class="link" id="clear-btn">Start over</button>
+        </div>
+        <p class="error" id="single-error" role="alert" hidden></p>
+      </form>
+
+      <div id="single-result" aria-live="polite"></div>
+    </section>
+
+    <!-- ============================== BATCH =============================== -->
+    <section id="panel-batch" role="tabpanel" aria-labelledby="tab-batch" hidden>
+      <div class="steps">
+        <div class="card">
+          <h2><span class="num">1</span> Application list (CSV)</h2>
+          <p class="hint">One row per label. It needs a <code>filename</code> column plus any of:
+            <code>brand_name</code>, <code>class_type</code>, <code>alcohol_content</code>, <code>net_contents</code>,
+            <code>producer_name_address</code>, <code>country_of_origin</code>.
+            <a href="/samples/batch.csv" download>Download an example CSV</a>.</p>
+          <input type="file" id="manifest" accept=".csv,text/csv" class="file">
+          <p class="status" id="manifest-status"></p>
+        </div>
+        <div class="card">
+          <h2><span class="num">2</span> Label images</h2>
+          <p class="hint">Select all the image files at once. File names must match the <code>filename</code> column.</p>
+          <input type="file" id="images" accept="image/*" multiple class="file">
+          <p class="status" id="images-status"></p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="batch-btn" disabled>Check all labels</button>
+        <button class="link" id="batch-sample-btn" type="button">Load the 9 example labels</button>
+      </div>
+      <p class="error" id="batch-error" role="alert" hidden></p>
+
+      <div id="batch-progress" hidden>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+        <p class="status" id="progress-text" aria-live="polite"></p>
+      </div>
+
+      <div id="batch-results" hidden>
+        <div class="summary" id="batch-summary"></div>
+        <div class="filters" role="group" aria-label="Show">
+          <button data-filter="all" aria-pressed="true">All</button>
+          <button data-filter="fail" aria-pressed="false">Problems</button>
+          <button data-filter="review" aria-pressed="false">Needs review</button>
+          <button data-filter="pass" aria-pressed="false">Passed</button>
+          <button class="link" id="download-btn">Download results (CSV)</button>
+        </div>
+        <table class="batch-table">
+          <thead><tr><th>Label</th><th>Brand</th><th>Result</th><th>Issues</th><th></th></tr></thead>
+          <tbody id="batch-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <span id="reader-info"></span> · Prototype - not connected to COLA. Images are not stored.
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

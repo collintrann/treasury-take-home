@@ -1,0 +1,10 @@
+filename,brand_name,class_type,alcohol_content,net_contents,producer_name_address,country_of_origin,what_this_tests
+01_old_tom_compliant.png,OLD TOM DISTILLERY,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Fully compliant - everything matches
+02_stones_throw_case.png,Stone's Throw,Small Batch Gin,41.5% Alc./Vol.,1 L,"Distilled by Stone's Throw Spirits Co., Portland, OR",,"Brand in all caps on label, title case in application (Dave's example) - should pass with a note"
+03_title_case_warning.png,RIVERBEND,Straight Rye Whiskey,50% Alc./Vol. (100 Proof),750 mL,"Riverbend Distilling, Louisville, KY",,'Government Warning' in title case (Jenny's example) - should fail
+04_wrong_abv.png,COPPER HOLLOW,Blended Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Copper Hollow Spirits, Austin, TX",,Label says 40% but application says 45% - should fail
+05_altered_warning.png,NORTHERN LIGHTS,Vodka,40% Alc./Vol.,750 mL,"Northern Lights Distillery, Fargo, ND",,Warning wording changed ('may cause health problems' -> 'can cause problems') - should fail
+06_warning_not_bold.png,HIGH DESERT,Blanco Tequila,40% Alc./Vol.,750 mL,"Imported by High Desert Imports, Phoenix, AZ",Mexico,Warning lead-in not bold - should fail (Claude) / review (OCR can't see bold)
+07_angled_glare.png,OLD TOM DISTILLERY,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Compliant label photographed at an angle with glare - tests robustness
+08_no_warning.png,HARBOR LIGHT,Spiced Rum,35% Alc./Vol. (70 Proof),750 mL,"Harbor Light Rum Co., Charleston, SC",,No government warning at all - should fail
+09_imported_scotch.png,GLEN ARDACH,Single Malt Scotch Whisky,43% Alc./Vol.,700 mL,"Imported by Ardach Imports LLC, New York, NY",Scotland,Import with country of origin; net contents in cl vs mL in application - should pass
