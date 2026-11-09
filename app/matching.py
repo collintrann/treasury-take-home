@@ -68,6 +68,22 @@ def _strip_phrasing(key: str, normalized: str) -> str:
     return pattern.sub("", normalized) if pattern else normalized
 
 
+# Words that name the company rather than the brand. Application records often
+# carry them ("UINTA BREWING COMPANY") while the label shows only "UINTA".
+_COMPANY_WORDS = frozenset(
+    "brewing brewery breweries winery wineries wines vineyard vineyards cellar cellars "
+    "distillery distilleries distilling spirits estate estates company co llc inc incorporated "
+    "corp corporation ltd limited".split()
+)
+
+
+def _strip_company_words(normalized: str) -> str:
+    words = normalized.split()
+    while words and words[-1] in _COMPANY_WORDS:
+        words.pop()
+    return " ".join(words) or normalized  # a name made only of company words stays as written
+
+
 def compare_text(key: str, expected: str, found: str) -> tuple[Status, str]:
     """Compare one text field. Both values are present."""
     if " ".join(expected.split()) == " ".join(found.split()):
@@ -78,6 +94,8 @@ def compare_text(key: str, expected: str, found: str) -> tuple[Status, str]:
         return "pass", "Matches (differs only in capitalization or punctuation)."
     if _strip_phrasing(key, n_exp) == _strip_phrasing(key, n_found):
         return "pass", "Matches (with standard label wording around it)."
+    if key == "brand_name" and _strip_company_words(n_exp) == _strip_company_words(n_found):
+        return "pass", "Matches (differs only in a company word such as Brewing Company or Winery)."
 
     ratio = similarity(expected, found)
     if ratio >= REVIEW_SIMILARITY:

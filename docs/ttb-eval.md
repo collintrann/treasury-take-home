@@ -16,12 +16,12 @@ After the fixes described below. The first run's Fail count is shown for compari
 
 | Beverage type | Pass | Needs review | Fail | Fail in first run | Checked |
 |---|---|---|---|---|---|
-| Spirits | 11 | 25 | 4 | 11 | 40 |
-| Wine | 13 | 24 | 3 | 12 | 40 |
-| Malt beverage | 9 | 29 | 2 | 11 | 40 |
-| All | 33 | 78 | 9 | 34 | 120 |
+| Spirits | 12 | 24 | 4 | 11 | 40 |
+| Wine | 15 | 22 | 3 | 12 | 40 |
+| Malt beverage | 13 | 25 | 2 | 11 | 40 |
+| All | 40 | 71 | 9 | 34 | 120 |
 
-Needs review is the most common result. Among labels that need review, the findings that most often need it are Brand name (50); GOVERNMENT WARNING: in bold (20); Rest of the warning not bold (20); Country of origin (13). Of the 54 brand names that need review, 17 are labels that lead with another name and print the brand elsewhere, 21 show only part of the name on record or add words to it ("UINTA" for UINTA BREWING COMPANY), and 13 are names the two readings disagreed on. The bold and paragraph findings need review whenever the two readings disagree or can't tell, which is common on small back-label print.
+Needs review is the most common result. Among labels that need review, the findings that most often need it are Brand name (40); GOVERNMENT WARNING: in bold (20); Rest of the warning not bold (20); Country of origin (13). Of the 44 brand names that need review, 16 are labels that lead with another name and print the brand elsewhere, 15 show only part of the name on record or add words to it ("perennial" for PERENNIAL ARTISAN ALES), and 11 are names the two readings disagreed on. The bold and paragraph findings need review whenever the two readings disagree or can't tell, which is common on small back-label print.
 
 6 of 120 were marked as images that can't be reliably assessed. 0 checks returned no result. In 3 checks only one of the two readings came back in time.
 
@@ -31,7 +31,7 @@ Counts over the 120 approved labels.
 
 | Requirement | Pass | Fail | Needs review | Not evaluated |
 |---|---|---|---|---|
-| Brand name | 66 | 0 | 54 | 0 |
+| Brand name | 76 | 0 | 44 | 0 |
 | Class / type | 0 | 0 | 0 | 120 |
 | Alcohol content | 0 | 0 | 0 | 120 |
 | Net contents | 0 | 0 | 0 | 120 |

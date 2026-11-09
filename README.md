@@ -90,7 +90,7 @@ The checker was run on 120 approved applications drawn at random from TTB's Publ
 
 - In the first run, 34 approved labels got a Fail. Every one was opened by hand. 26 Fail findings were checker mistakes, such as treating "(1)According" as a wording change or missing a brand printed below a product name. They are fixed, with tests.
 - After the fixes, 9 approved labels fail. All 9 are real problems with the printed warning, such as "ACOHOLIC" or a missing comma. TTB approved them anyway.
-- 33 pass and 78 need review. Most reviews are a brand worded differently from TTB's record, or a typography question the two readings didn't agree on.
+- 40 pass and 71 need review. Most reviews are a brand worded differently from TTB's record, or a typography question the two readings didn't agree on. Company words such as "Brewing Company" or "Winery" don't count as a difference, so "SILURIA" on the label matches SILURIA BREWING COMPANY in the record.
 - 30 copies with another record's brand name swapped in were all kept from passing.
 
 [docs/ttb-eval.md](docs/ttb-eval.md) has the full results and every Fail with its classification.

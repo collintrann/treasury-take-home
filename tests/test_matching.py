@@ -49,8 +49,31 @@ def test_partial_word_is_not_a_containment_match():
 
 def test_extra_or_missing_words_need_review():
     assert status(compare_text("class_type", "Rum", "Spiced Rum Liqueur")) == "needs_review"
-    assert status(compare_text("brand_name", "Old Tom", "OLD TOM DISTILLERY")) == "needs_review"
+    assert status(compare_text("brand_name", "Old Tom", "OLD TOM RESERVE")) == "needs_review"
     assert status(compare_text("country_of_origin", "Mexico", "Product of New Mexico")) == "needs_review"
+
+
+def test_brand_ignores_company_words_at_the_end():
+    # The application often records the company ("UINTA BREWING COMPANY"); the label shows the brand.
+    for expected, found in [
+        ("UINTA BREWING COMPANY", "UINTA"),
+        ("Old Tom", "OLD TOM DISTILLERY"),
+        ("Marrow Creek Vineyards LLC", "MARROW CREEK"),
+        ("Saltmarsh Estate Winery, Inc.", "Saltmarsh"),
+    ]:
+        assert compare_text("brand_name", expected, found) == (
+            "pass",
+            "Matches (differs only in a company word such as Brewing Company or Winery).",
+        ), (expected, found)
+
+
+def test_company_words_never_make_different_brands_match():
+    assert status(compare_text("brand_name", "Harbor Light", "SALT HARBOR")) == "fail"
+    assert status(compare_text("brand_name", "Uinta Brewing", "Wasatch Brewing")) == "fail"
+    # A name made only of company words is compared as written.
+    assert status(compare_text("brand_name", "Brewing Company", "Winery")) == "fail"
+    # Only brand names drop company words.
+    assert status(compare_text("producer_name_address", "Uinta", "Uinta Brewing Company")) != "pass"
 
 
 # -------------------------------------------------------------------- alcohol

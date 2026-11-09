@@ -235,7 +235,7 @@ def report() -> None:
     brand_reasons = (
         f"Of the {len(brand_review)} brand names that need review, {elsewhere} are labels that lead with another name "
         f"and print the brand elsewhere, {partial} show only part of the name on record or add words to it "
-        f"(\"UINTA\" for UINTA BREWING COMPANY), and {disagree} are names the two readings disagreed on."
+        f"(\"perennial\" for PERENNIAL ARTISAN ALES), and {disagree} are names the two readings disagreed on."
     )
 
     caught = [r for r in altered if r["overall"] != "pass"]

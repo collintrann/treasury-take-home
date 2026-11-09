@@ -43,7 +43,7 @@ Trade-off: more images mean more tokens and a longer read. Real applications too
 
 The brand on TTB's record is often not the biggest name on the label. Labels lead with a product name and print the brand smaller, or use the bottler's name as the brand. So each reading also lists the label's other names. When the application's brand matches one of them, or appears in the bottler statement, the brand finding is needs review with a note saying where it appears. It fails only when the brand is nowhere on the label.
 
-Accents are ignored, because TTB's records are plain capitals ("MARTI" for "Martí"). The same words in another order, or run together in a logo, need review.
+Accents are ignored, because TTB's records are plain capitals ("MARTI" for "Martí"). The same words in another order, or run together in a logo, need review. Company words at the end of a brand, such as "Brewing Company", "Winery" or "LLC", are ignored too, because the record often names the company while the label shows only the brand ("SILURIA BREWING COMPANY" for "SILURIA"). On the real test set this moved 7 labels from needs review to pass and let none of the 30 swapped brands through.
 
 ## What applies to which product
 

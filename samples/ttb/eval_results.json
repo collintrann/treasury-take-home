@@ -1613,10 +1613,10 @@
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "UINTA BREWING COMPANY",
     "observed": "UINTA",
-    "explanation": "The label shows only part of the application value. Please check."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -3031,8 +3031,8 @@
     "key": "brand_name",
     "status": "needs_review",
     "expected": "COPPERWORKS DISTILLING CO.",
-    "observed": "COPPERWORKS",
-    "explanation": "The label shows only part of the application value. Please check."
+    "observed": "COPPER WORKS",
+    "explanation": "We couldn't confirm this item. Please check the label."
    },
    {
     "key": "class_type",
@@ -4448,7 +4448,7 @@
     "status": "needs_review",
     "expected": "BELLEFLOWER BREWING CO.",
     "observed": "Belle Fest",
-    "explanation": "The label leads with a different name, but the brand also appears as \"Brewed and packaged with love by Belleflower Brewing Co. in Portland, Maine\". Please check which name is the brand."
+    "explanation": "We couldn't confirm this item. Please check the label."
    },
    {
     "key": "class_type",
@@ -6749,16 +6749,16 @@
    "producer_name_address": "",
    "country_of_origin": ""
   },
-  "overall": "needs_review",
+  "overall": "pass",
   "image_assessable": true,
   "image_note": "",
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "WILDFLOWER HOLLER DISTILLERY",
     "observed": "WILDFLOWER HOLLER",
-    "explanation": "The label shows only part of the application value. Please check."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -8361,10 +8361,10 @@
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "SOUTHERN GRIST BREWING CO",
     "observed": "Southern Grist",
-    "explanation": "The label shows only part of the application value. Please check."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -9594,16 +9594,16 @@
    "producer_name_address": "",
    "country_of_origin": ""
   },
-  "overall": "needs_review",
+  "overall": "pass",
   "image_assessable": true,
   "image_note": "",
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "GRAPESTAKE CELLARS",
     "observed": "Grapestake",
-    "explanation": "We couldn't confirm this item. Please check the label."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -14021,16 +14021,16 @@
    "producer_name_address": "",
    "country_of_origin": ""
   },
-  "overall": "needs_review",
+  "overall": "pass",
   "image_assessable": true,
   "image_note": "The warning and producer text are printed sideways (rotated 90 degrees) on the left side of the label.",
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "RASSAWEK WINERY",
     "observed": "Rassawek",
-    "explanation": "The label shows only part of the application value. Please check."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -15437,16 +15437,16 @@
    "producer_name_address": "",
    "country_of_origin": ""
   },
-  "overall": "needs_review",
+  "overall": "pass",
   "image_assessable": true,
   "image_note": "",
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "FORT GEORGE",
-    "observed": "FORT GEORGE BREWERY",
-    "explanation": "We couldn't confirm this item. Please check the label."
+    "observed": "FORT GEORGE",
+    "explanation": "Exact match."
    },
    {
     "key": "class_type",
@@ -17030,16 +17030,16 @@
    "producer_name_address": "",
    "country_of_origin": ""
   },
-  "overall": "needs_review",
+  "overall": "pass",
   "image_assessable": true,
   "image_note": "The warning and producer statement are printed sideways in small type over a dotted yellow background, which makes them slightly harder to read.",
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "SAWYER BREWING CO",
     "observed": "SAWYER",
-    "explanation": "We couldn't confirm this item. Please check the label."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -17207,16 +17207,16 @@
    "producer_name_address": "",
    "country_of_origin": ""
   },
-  "overall": "needs_review",
+  "overall": "pass",
   "image_assessable": true,
   "image_note": "No photo problems; the label is a clean flat proof, but none of the keg-size net contents checkboxes are marked, so no net contents can be transcribed.",
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "SILURIA BREWING COMPANY",
     "observed": "SILURIA",
-    "explanation": "The label shows only part of the application value. Please check."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -19136,10 +19136,10 @@
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "BACK ROAD BREWING COMPANY",
     "observed": "BACK ROAD BREWING CO.",
-    "explanation": "Very close but not identical (89% similar). Please check by eye."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
@@ -21068,16 +21068,16 @@
    "producer_name_address": "",
    "country_of_origin": ""
   },
-  "overall": "needs_review",
+  "overall": "pass",
   "image_assessable": true,
   "image_note": "Neither net contents checkbox is marked, so which size applies cannot be determined from the image.",
   "findings": [
    {
     "key": "brand_name",
-    "status": "needs_review",
+    "status": "pass",
     "expected": "PONDASETA BREWING CO",
     "observed": "PONDASETA",
-    "explanation": "We couldn't confirm this item. Please check the label."
+    "explanation": "Matches (differs only in a company word such as Brewing Company or Winery)."
    },
    {
     "key": "class_type",
