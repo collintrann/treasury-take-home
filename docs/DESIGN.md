@@ -92,3 +92,4 @@ Images are processed in memory and never stored. Labels are sent to the Anthropi
 
 - Which two models to use, and the cutoff time. Best decided from benchmark results.
 - What happens when only one reader answers.
+- What the input form asks for. The real application (TTB F 5100.31 and COLAs Online) has no alcohol content or net contents fields; those exist only on the label. The brief still treats them as values to match. Label rules also differ by beverage type: alcohol content is always required on spirits, only above 14% on wine, and usually optional on beer; beer net contents must be in US units. Country of origin is a Customs rule, not TTB's. Sources: 27 CFR parts 4, 5, 7 and 16 (https://www.ecfr.gov/current/title-27) and https://www.ttb.gov/regulated-commodities/beverage-alcohol/distilled-spirits/labeling.
