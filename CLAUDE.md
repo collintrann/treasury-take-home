@@ -1,6 +1,6 @@
 # Label Check
 
-Prototype for TTB compliance agents. It reads an alcohol label image, compares each field to the COLA application, and checks the Government Health Warning word for word. The brief is at https://github.com/treasurytakehome-rgb/instructions. Users are nontechnical government workers, many over 50, so the UI must stay plain and must not mention AI, models or other internals.
+Prototype for TTB compliance agents. It reads an alcohol label image, compares each field to the COLA application, and checks the Government Health Warning word for word. The brief is at https://github.com/treasurytakehome-rgb/instructions, distilled into `REQUIREMENTS.md`; cite requirement IDs (M2, P1) when they drive a change. Users are nontechnical government workers, many over 50, so the UI must stay plain and must not mention AI, models or other internals.
 
 ## Working rules
 
