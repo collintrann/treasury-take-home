@@ -4,7 +4,7 @@ Label Check helps TTB agents review alcohol label applications. It checks each l
 
 **Live demo:** https://treasury-take-home-flame.vercel.app
 
-The demo has sample applications in the "Try an example" menu. Pick one and click "Check label".
+Open any application in the review queue. The check runs on its own, and you record a decision.
 
 ![Label Check flagging a misspelled government warning](docs/screenshot.png)
 
@@ -39,6 +39,8 @@ npm run dev
 ```
 
 The example settings already point the web page at `http://localhost:8000`. Open http://localhost:3000.
+
+The page has two screens: the review queue, and the review of one application with its label, the check and a decision bar. Check results and decisions stay in the browser tab and are never saved on the server.
 
 ### Tests
 
@@ -106,5 +108,5 @@ Frontend settings go in `web/.env.local`. `CHECKER_URL` is the backend's address
 - The tool helps agents review labels. It doesn't approve or reject them.
 - A photo has no known scale, so the tool can't check the warning's minimum type size.
 - The test labels in `samples/` are generated. Each one covers a case from the stakeholder interviews. Accuracy on real submissions hasn't been measured yet.
-- Batch checking runs in the browser from a CSV file and a set of images. There is no server-side job queue, so closing the tab stops the batch.
+- There is no batch run. Agents work through the review queue one application at a time, and their decisions are not saved.
 - The service sends label images to Anthropic to be read and doesn't store them. On a network that blocks outside services, IT only needs to allow this site's address, because the browser never contacts anything else. A government deployment would need the model from an approved provider, such as Claude in the agency's own cloud, or a model hosted on site.
