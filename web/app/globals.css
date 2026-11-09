@@ -9,6 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-atkinson), system-ui, sans-serif;
   --font-heading: var(--font-atkinson), system-ui, sans-serif;
+  --color-masthead: var(--masthead);
+  --color-masthead-foreground: var(--masthead-foreground);
   --color-pass: var(--pass);
   --color-pass-bg: var(--pass-bg);
   --color-review: var(--review);
@@ -65,6 +67,8 @@
   --input: #8a94a3;
   --ring: #1d4f91;
   --radius: 0.75rem;
+  --masthead: #1d4f91;
+  --masthead-foreground: #ffffff;
   --pass: #135c2c;
   --pass-bg: #e0f2e6;
   --review: #744a00;
@@ -95,6 +99,8 @@
     --border: #3b444f;
     --input: #6b7684;
     --ring: #8ab8ff;
+    --masthead: #16263d;
+    --masthead-foreground: #eef1f5;
     --pass: #8ae2a9;
     --pass-bg: #12301e;
     --review: #f6cd70;

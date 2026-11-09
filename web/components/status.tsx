@@ -1,63 +1,103 @@
-import { CircleCheck, CircleMinus, CircleX, TriangleAlert, type LucideIcon } from "lucide-react";
+import {
+  Ban,
+  CircleCheck,
+  CircleDashed,
+  CircleMinus,
+  CircleX,
+  FilePen,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { FieldStatus, Verdict } from "@/lib/api";
+import type { FindingStatus, Overall } from "@/lib/api";
+import type { Decision } from "@/lib/reviews";
 
-type Tone = "pass" | "review" | "fail" | "skip";
+// Every status is shown as an icon and a word, never by color alone.
 
-export const TONE: Record<Tone, { fill: string; edge: string }> = {
-  pass: { fill: "bg-pass-bg text-pass border-pass", edge: "border-l-pass" },
-  review: { fill: "bg-review-bg text-review border-review", edge: "border-l-review" },
-  fail: { fill: "bg-fail-bg text-fail border-fail", edge: "border-l-fail" },
-  skip: { fill: "bg-skip-bg text-skip border-skip", edge: "border-l-skip" },
+export type Tone = "pass" | "review" | "fail" | "neutral";
+
+// Tone names match the Badge and Alert variants of the same name.
+export const TONE: Record<Tone, { text: string; edge: string; button: string }> = {
+  pass: { text: "text-pass", edge: "border-l-pass", button: "border-pass text-pass hover:bg-pass-bg hover:text-pass" },
+  review: {
+    text: "text-review",
+    edge: "border-l-review",
+    button: "border-review text-review hover:bg-review-bg hover:text-review",
+  },
+  fail: { text: "text-fail", edge: "border-l-fail", button: "border-fail text-fail hover:bg-fail-bg hover:text-fail" },
+  neutral: { text: "text-skip", edge: "border-l-skip", button: "border-skip text-skip hover:bg-skip-bg hover:text-skip" },
 };
 
-export interface StatusLook {
+export interface Look {
   Icon: LucideIcon;
   word: string;
   tone: Tone;
 }
 
-export const FIELD_STATUS: Record<FieldStatus, StatusLook> = {
-  pass: { Icon: CircleCheck, word: "Match", tone: "pass" },
-  review: { Icon: TriangleAlert, word: "Check", tone: "review" },
-  fail: { Icon: CircleX, word: "Mismatch", tone: "fail" },
-  missing: { Icon: CircleX, word: "Not found", tone: "fail" },
-  skipped: { Icon: CircleMinus, word: "Skipped", tone: "skip" },
-};
-
-export const VERDICT: Record<Verdict, StatusLook & { title: string; detail: string; count: string }> = {
+export const STATUS: Record<FindingStatus, Look & { group: string }> = {
+  fail: {
+    Icon: CircleX,
+    word: "Fail",
+    tone: "fail",
+    group: "Failed",
+  },
+  needs_review: {
+    Icon: TriangleAlert,
+    word: "Needs review",
+    tone: "review",
+    group: "Needs review",
+  },
   pass: {
     Icon: CircleCheck,
     word: "Pass",
     tone: "pass",
-    title: "Label matches the application",
-    detail: "Every checked item matches.",
-    count: "passed",
+    group: "Passed",
   },
-  review: {
-    Icon: TriangleAlert,
-    word: "Review",
-    tone: "review",
-    title: "Needs your review",
-    detail: "Nothing is clearly wrong, but some items need a human eye.",
-    count: "need review",
-  },
-  fail: {
-    Icon: CircleX,
-    word: "Problems",
-    tone: "fail",
-    title: "Problems found",
-    detail: "At least one item does not match. See the items marked below.",
-    count: "problems",
+  not_evaluated: {
+    Icon: CircleMinus,
+    word: "Not evaluated",
+    tone: "neutral",
+    group: "Not evaluated",
   },
 };
 
-export function StatusBadge({ look, className }: { look: StatusLook; className?: string }) {
+export const NOT_CHECKED: Look = { Icon: CircleDashed, word: "Not checked yet", tone: "neutral" };
+
+export const DECISION: Record<Decision, Look & { action: string; question: string; confirm: string }> = {
+  approve: { Icon: CircleCheck, word: "Approved", tone: "pass", action: "Approve", question: "Approve this application?", confirm: "Yes, approve" },
+  needs_correction: {
+    Icon: FilePen,
+    word: "Needs correction",
+    tone: "review",
+    action: "Needs correction",
+    question: "Send this application back for correction?",
+    confirm: "Yes, needs correction",
+  },
+  reject: { Icon: Ban, word: "Rejected", tone: "fail", action: "Reject", question: "Reject this application?", confirm: "Yes, reject" },
+};
+
+export const VERDICT: Record<Overall, string> = {
+  fail: "At least one item fails. The problems are listed first.",
+  needs_review: "Nothing clearly fails, but some items need your judgment.",
+  pass: "Everything checked matches the application and the warning rules.",
+};
+
+export function StatusBadge({ look, className }: { look: Look; className?: string }) {
   return (
-    <Badge variant="outline" className={cn("border-2", TONE[look.tone].fill, className)}>
+    <Badge variant={look.tone} className={className}>
       <look.Icon aria-hidden />
       {look.word}
     </Badge>
+  );
+}
+
+export function StatusText({ look, prefix }: { look: Look; prefix?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <look.Icon className={cn("size-5 shrink-0", TONE[look.tone].text)} aria-hidden />
+      {prefix && <span className="text-muted-foreground">{prefix}</span>}
+      <span className={cn(look.tone === "neutral" ? "text-muted-foreground" : "font-bold")}>{look.word}</span>
+    </span>
   );
 }

@@ -1,130 +1,123 @@
 # Label Check
 
-A prototype that checks an alcohol label photo against its TTB application. It reads the label, compares each field to the application for the product type, and checks the Government Health Warning. Results are decision support for an agent, not an approval.
+Label Check helps TTB agents review alcohol label applications. It checks each label against the application and the Government Health Warning rules.
 
-**Deployed URL:** not deployed yet.
+**Live demo:** https://treasury-take-home-flame.vercel.app
 
-![Label Check screenshot](docs/screenshot.png)
+The demo opens on a review queue of 25 sample applications. Open one and the label check runs. Agents don't upload or type anything.
 
-## Run it
+![An application in the review queue with a misspelled government warning flagged](docs/screenshot.png)
 
-Needs Python 3.11 or newer, Node.js 20 or newer, and an Anthropic API key.
+## Setup
+
+You need Python 3.11 or newer, Node.js 20 or newer, and an Anthropic API key.
+
+### Backend
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env              # then add your ANTHROPIC_API_KEY
+cp .env.example .env
+```
+
+Add your `ANTHROPIC_API_KEY` to `.env`, then start the checking service on port 8000.
+
+```bash
 uvicorn app.main:app --reload --env-file .env
 ```
 
-That starts the checking service on port 8000. Then start the web page:
+### Frontend
+
+In a second terminal:
 
 ```bash
 cd web
 npm install
-cp .env.example .env.local        # CHECKER_URL=http://localhost:8000
+cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000 and pick an application from the review queue.
+The example settings already point the web page at `http://localhost:8000`. Open http://localhost:3000.
 
-The page is Next.js with shadcn components. Its server forwards requests to the checking service and adds the shared secret, so the browser never calls the service directly. Photos are shrunk in the browser to stay under Vercel's 4.5 MB upload limit. The application fields are defined once, in `web/lib/fields.ts`.
-
-Run the tests with `pytest`. They need no API key or network.
-
-The checking service also runs with Docker:
+### Tests
 
 ```bash
-docker build -t label-check .
-docker run -p 8000:8000 --env-file .env label-check
+pytest
+cd web && npm run lint && npm run build
 ```
 
-## Using it
-
-- **Review queue.** A simulated queue of 25 generated applications (spirits, wine and beer). Open one and run the check on its stored label image.
-- **Check one label.** Upload a photo, choose the product type, and type what the application says. Blank fields are not evaluated. The warning is always checked.
-
-Batch review of hundreds of labels is not implemented. The queue is a simulation, checked one application at a time.
-
-Each requirement gets one of four results:
-
-| Result | Meaning |
-|---|---|
-| Pass | Matches the application, or differs only in capitalization, punctuation or units |
-| Fail | The label text clearly differs from the application or the required warning |
-| Needs review | Missing from the photo, unclear, or the two readings disagree. The agent should look |
-| Not evaluated | Doesn't apply to this product, wasn't in the application, or can't be measured from a photo. Each one says why |
-
-The label's overall result is fail if anything fails, otherwise needs review if anything does, otherwise pass. When the photo can't be read with confidence, nothing fails and the result asks for a clearer image.
+The backend tests cover every checking rule, the two-reading merge, the queue and the API errors. They use stand-ins for the models, so they need no API key or network.
 
 ## How it works
 
-- Claude reads the label into fixed fields and gives yes, no or can't-tell answers on the warning's typography and on whether the photo is readable. Plain, tested Python rules decide each result.
-- Two different models read each label at once. A requirement only passes if both pass it. Any disagreement goes to needs review, which catches a model quietly fixing a typo in the warning.
-- What applies depends on the product type. Alcohol content is required on spirits, on wine over 14%, and optional on beer. Country of origin is only checked for imports.
-- Numbers are compared as numbers, so 90 proof matches 45% and 0.75 L matches 750 mL.
-- The warning wording and the capitalized "GOVERNMENT WARNING:" lead-in are checked from the text and can fail. Bold, paragraph, separation and legibility are judged from the photo, so they can pass or need review but never fail. Type size is never evaluated.
+1. Each application arrives with its label image and the information the company entered. It waits in the review queue.
+2. When the agent opens an application, two Claude models, Opus 5.5 and Haiku 5.5, read the label at the same time. Each one copies the label's text into the same set of fields. Neither decides whether anything passes.
+3. Python rules compare each reading with the application and give each requirement a result: Pass, Fail, Needs review, or Not evaluated.
+4. The service compares the two sets of results. A requirement passes only when both readings pass it. When they disagree, it goes to the agent for review.
+5. The page shows the label beside the results, problems first. Each result has the application value, the value found on the label, and a short explanation.
+6. The agent records a decision: Approve, Needs correction, or Reject. The decision stays in the browser tab. Nothing is saved on the server.
 
-## API
+### The rules
 
-The checking service speaks JSON. The response models in `app/models.py` are the contract.
+A result is Fail only when the label clearly contradicts the application or the regulation, such as a different alcohol content or changed warning wording. Anything missing, unreadable or uncertain is Needs review, because the information may be on a label panel that wasn't submitted.
 
-| Route | Purpose |
-|---|---|
-| `GET /api/health` | Status, no secret needed |
-| `GET /api/queue` | Queue items, oldest first |
-| `GET /api/queue/{id}` | One queued application |
-| `POST /api/queue/{id}/check` | Check a queued application's stored image |
-| `POST /api/check` | Check an upload: `image`, `product_type` and the application fields |
-| `GET /samples/queue/{file}` | Queue label images |
+The government warning has to match the regulation word for word, including punctuation, with "GOVERNMENT WARNING:" in capital letters. When the wording differs, the page marks the missing and extra words. Whether the header is bold, the rest isn't bold, and the text is one legible paragraph set apart from other text are judged from the image, so a problem there is Needs review rather than Fail. The minimum type size is always Not evaluated, because a photo has no known scale.
 
-Errors return `{"detail": "..."}` with 400, 404, 413 or 503.
+Brand name, class/type, producer and country pass when they are identical or differ only in capitalization or punctuation, so "STONE'S THROW" matches "Stone's Throw". A near miss, such as a one-letter difference, goes to review.
 
-The reasoning and trade-offs are in [docs/DESIGN.md](docs/DESIGN.md). The requirements are in [REQUIREMENTS.md](REQUIREMENTS.md).
+Alcohol content and net contents are compared as numbers. 90 proof matches 45%, and 750 mL matches 0.75 L.
 
-## Benchmark
+Which rules apply depends on the beverage type. Alcohol content is required on spirits, on wine only above 14%, and not on malt beverages. Country of origin applies only to imports. A rule that doesn't apply shows as Not evaluated, with the reason.
 
-```bash
-python scripts/benchmark.py --runs 3
-```
+If the image is too unclear to assess, the result is Needs review and the page asks the agent to request a clearer image.
 
-Runs each model on the 25 queue labels and scores them against each application's expected result. It reports speed, accuracy, and how often a model silently fixes a typo. It makes real, billed API calls and writes `docs/benchmark-results.md`. It has not been run yet.
+## Design decisions
 
-## Code
+- **The AI reads and the code decides.** Every result comes from a rule that has a test. Changing the prompt can't change what passes.
+- **Two readings of every label.** Approving a bad label is the worst mistake this tool can make. The most likely cause is a model fixing a typo in the warning as it reads, which produces a clean-looking result. A second, different model rarely makes the same fix, so the two readings disagree and the agent sees the requirement.
+- **Unclear results go to the agent.** The tool supports the agent's review. The agent makes the decision.
+- **A review queue, not an upload form.** In practice, applications arrive with their labels and wait for review, so the demo works the same way.
+- **Plain language.** The page never shows technical terms. Notes tell the agent what to do, such as "Please check the label."
 
-| Path | Contents |
-|---|---|
-| `app/main.py` | API routes |
-| `app/models.py` | Request and response shapes |
-| `app/extraction/` | Reads the label with two models under a time limit |
-| `app/matching.py`, `app/warning.py` | The rules that decide each result |
-| `app/consensus.py` | Combines the two readings into the final result |
-| `app/queue.py` | Loads the simulated review queue |
-| `web/` | The web page (Next.js) |
-| `samples/queue/` | 25 generated label images and `applications.json` |
-| `scripts/` | Queue generator (`generate_samples.py`) and benchmark |
-| `tests/` | Unit and API tests, with stand-ins for the models |
+[docs/DESIGN.md](docs/DESIGN.md) explains the trade-offs. [REQUIREMENTS.md](REQUIREMENTS.md) lists the requirements.
 
-## Settings
+## Performance
 
-Set in `.env`. Only the API key is required.
+Live checks took 2.8 to 6.4 seconds per label, and most took 3 to 4 seconds. The brief's target is about 5 seconds. The two readings run in parallel, so a check takes as long as the slower reading. A reading that takes more than 15 seconds is dropped.
+
+The API prepares each new output format the first time it sees it, which took about a minute. The service reads one sample label with each model when it starts, so agents don't wait for that.
+
+## Tools
+
+- Frontend: Next.js, React, Tailwind CSS, shadcn/ui, Lucide icons
+- Backend: Python, FastAPI, Pillow
+- Models: Anthropic Claude Opus 5.5 and Haiku 5.5
+- Testing: pytest, plus Playwright for end-to-end runs
+- Hosting: Vercel for the frontend, DigitalOcean App Platform with Docker for the backend
+
+## Configuration
+
+Backend settings go in `.env`.
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | none | Required |
-| `PRIMARY_MODEL` | `claude-opus-5-5` | First reader |
-| `SECONDARY_MODEL` | `claude-haiku-5-5` | Second reader; empty for one reader only |
-| `CLAUDE_EFFORT` | `low` | Thinking effort |
-| `READ_DEADLINE_SECONDS` | `15` | Readers still running after this are dropped. Only a guard against hung calls |
-| `MAX_CONCURRENCY` | `8` | Labels checked at once per server |
-| `MAX_UPLOAD_MB` | `15` | Upload size limit |
-| `CHECKER_SECRET` | none | When set, API calls must send it in the `X-Checker-Secret` header |
+| `CHECKER_SECRET` | none | When set, every API call must send this value in the `X-Checker-Secret` header |
+| `PRIMARY_MODEL` | `claude-opus-5-5` | First reading |
+| `SECONDARY_MODEL` | `claude-haiku-5-5` | Second reading. Leave empty to use one reading. |
+| `READ_DEADLINE_SECONDS` | `15` | The service drops any reading that takes longer |
 
-## Limitations
+Frontend settings go in `web/.env.local`. `CHECKER_URL` is the backend's address, and `CHECKER_SECRET` must match the backend's value. The browser only talks to the Next.js server, which adds the secret, so nobody can call the backend directly.
 
-- Measured on a handful of generated labels only (3.3 to 6.4 s per label). The benchmark hasn't been run.
-- The first read after the reading schema changes takes about a minute while the API prepares it. The service does one read of a sample label at startup, so agents don't wait for it.
-- Test labels are generated, not real photos.
-- Only alcohol content and country of origin vary by product type. Other beverage-specific rules are not implemented (see `docs/DESIGN.md`).
-- Batch review is not implemented beyond the simulated queue.
-- No COLA integration. Nothing is stored.
+## Sample applications
+
+The 25 applications in `samples/queue/` are generated by `scripts/generate_samples.py`, which draws each label with exact text. That gives every application a known correct result. They cover spirits, wine and malt beverages, clean labels, and the problems from the stakeholder interviews: a wrong alcohol content, changed warning wording, a title-case warning header, a missing warning, a brand mismatch, imports, angled photos with glare, and an unreadable photo.
+
+## Assumptions and limitations
+
+- The tool helps agents review labels. It doesn't approve or reject them.
+- The sample labels are generated. Accuracy on real submissions hasn't been measured yet.
+- The demo reads one image per application. Real applications often split the label across a front and a back image.
+- Batch processing isn't implemented beyond the simulated queue. Results and decisions last only for the browser tab.
+- The service sends label images to Anthropic to be read and doesn't store them. On a network that blocks outside services, IT only needs to allow this site's address, because the browser never contacts anything else. A government deployment would need the model from an approved provider, such as Claude in the agency's own cloud, or a model hosted on site.

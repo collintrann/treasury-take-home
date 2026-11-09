@@ -1,53 +1,53 @@
-import type { Application } from "./fields";
-import { shrinkForUpload } from "./image";
+import type { FieldKey } from "./fields";
 
-// Response shapes from the checker service (app/models.py and app/main.py).
+export type ProductType = "distilled_spirits" | "wine" | "malt_beverage";
+export type Application = Record<FieldKey, string>;
 
-export type Verdict = "pass" | "review" | "fail";
-export type FieldStatus = Verdict | "missing" | "skipped";
+export interface QueueItem {
+  id: string;
+  submitted_at: string;
+  applicant: string;
+  product_type: ProductType;
+  brand_name: string;
+  // A same-origin path such as /samples/queue/COLA-26-0001.png.
+  image: string;
+}
+
+export interface QueuedApplication extends Omit<QueueItem, "brand_name"> {
+  application: Application;
+}
+
+export type Overall = "pass" | "fail" | "needs_review";
+export type FindingStatus = Overall | "not_evaluated";
+export type FindingGroup = "application" | "warning";
 
 export interface DiffPart {
   op: "equal" | "missing" | "extra";
   text: string;
 }
 
-export interface FieldResult {
-  field: string;
+export interface Finding {
+  key: string;
+  group: FindingGroup;
   label: string;
+  status: FindingStatus;
   expected: string | null;
-  found: string | null;
-  status: FieldStatus;
-  note: string;
+  observed: string | null;
+  explanation: string;
   diff: DiffPart[] | null;
-  agreement: "agreed" | "disputed" | "single" | null;
 }
 
-export interface VerificationResult {
-  overall: Verdict;
-  fields: FieldResult[];
-  readers: string[];
-  extraction_note: string;
+export interface CheckResult {
+  overall: Overall;
+  image_assessable: boolean;
+  image_note: string;
+  findings: Finding[];
   elapsed_ms: number;
-  filename: string | null;
-}
-
-export interface ManifestRow {
-  filename: string;
-  application: Application;
-}
-
-export interface ParsedManifest {
-  rows: ManifestRow[];
-  errors: string[];
-}
-
-export interface Example extends ManifestRow {
-  what_this_tests: string;
 }
 
 export const UNREACHABLE = "We couldn't reach the checker. Please try again.";
 
-async function call(path: string, init?: RequestInit): Promise<Response> {
+async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, init);
@@ -55,7 +55,7 @@ async function call(path: string, init?: RequestInit): Promise<Response> {
     throw new Error(UNREACHABLE);
   }
   if (!res.ok) throw new Error(await errorMessage(res));
-  return res;
+  return res.json();
 }
 
 async function errorMessage(res: Response): Promise<string> {
@@ -68,25 +68,10 @@ async function errorMessage(res: Response): Promise<string> {
   return `Something went wrong (error ${res.status}). Please try again.`;
 }
 
-export async function verifyLabel(image: File, application: Application): Promise<VerificationResult> {
-  const upload = await shrinkForUpload(image);
-  const form = new FormData();
-  form.append("image", upload, upload.name);
-  for (const [key, value] of Object.entries(application)) form.append(key, value);
-  return (await call("/api/verify", { method: "POST", body: form })).json();
-}
+const queuePath = (id: string) => `/api/queue/${encodeURIComponent(id)}`;
 
-export async function parseManifest(csv: File): Promise<ParsedManifest> {
-  const form = new FormData();
-  form.append("manifest", csv, csv.name);
-  return (await call("/api/parse-manifest", { method: "POST", body: form })).json();
-}
+export const getQueue = () => call<QueueItem[]>("/api/queue");
 
-export async function getExamples(): Promise<Example[]> {
-  return (await call("/api/examples")).json();
-}
+export const getApplication = (id: string) => call<QueuedApplication>(queuePath(id));
 
-export async function fetchSample(filename: string): Promise<File> {
-  const blob = await (await call(`/samples/${encodeURIComponent(filename)}`)).blob();
-  return new File([blob], filename, { type: blob.type });
-}
+export const checkQueued = (id: string) => call<CheckResult>(`${queuePath(id)}/check`, { method: "POST" });
