@@ -64,13 +64,39 @@ function renderField(f) {
         <span class="pill s-${f.status}">${s.icon} ${s.word}</span>
       </div>
       <p class="note">${esc(f.note)}</p>
-      ${compare}
+      ${f.agreement === "disputed" ? renderReadings(f.readings) + (showDiff ? renderDiff(f.diff) : "") : compare}
     </article>`;
+}
+
+// When the two AI readers disagree, show what each one saw so the agent can
+// decide quickly which is right by looking at the label.
+function renderReadings(readings) {
+  const cells = readings.map((rd) => {
+    const st = STATUS[rd.status] || STATUS.review;
+    return `<div><b>${esc(shortModel(rd.model))} read</b>${esc(rd.found) || "<em>not found</em>"}
+      <span class="reader-verdict s-${rd.status}">${st.icon} ${st.word}</span></div>`;
+  });
+  return `<div class="compare">${cells.join("")}</div>`;
+}
+
+function shortModel(id) {
+  // "claude-opus-5-5" -> "Opus 5.5"; anything unrecognised is shown as-is.
+  const m = /^claude-([a-z]+)-(\d+)(?:-(\d+))?$/.exec(id || "");
+  return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] ? "." + m[3] : ""}` : id;
+}
+
+function readerSummary(r) {
+  if (r.extraction_method !== "claude") return "offline OCR";
+  const checked = r.fields.filter((f) => f.status !== "skipped");
+  const names = r.readers.map(shortModel).join(" + ");
+  if (r.readers.length < 2) return `AI reader (${names})`;
+  const agreed = checked.filter((f) => f.agreement === "agreed").length;
+  return `two AI readers (${names}), which agreed on ${agreed} of ${checked.length} items`;
 }
 
 function renderResult(r) {
   const b = BANNER[r.overall];
-  const reader = r.extraction_method === "claude" ? "AI reader" : "offline OCR";
+  const reader = readerSummary(r);
   return `<div class="banner s-${r.overall}" role="status">
       <span class="icon" aria-hidden="true">${b.icon}</span>
       <div><h2>${b.title}</h2><p>${b.sub}</p></div>
@@ -189,7 +215,9 @@ $("#example").addEventListener("change", async (ev) => {
 });
 
 fetch("/api/health").then((r) => r.json()).then((h) => {
-  $("#reader-info").textContent = h.reader === "claude" ? "Reader: AI (with offline OCR backup)" : "Reader: offline OCR";
+  $("#reader-info").textContent = h.reader === "claude"
+    ? `Readers: ${h.models.map(shortModel).join(" + ")} (offline OCR backup)`
+    : "Reader: offline OCR";
 }).catch(() => {});
 
 // -------------------------------------------------------------------- batch

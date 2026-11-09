@@ -29,7 +29,7 @@ uvicorn app.main:app --reload
 # open http://localhost:8000 and pick a label from the "Try an example" menu
 ```
 
-Run the tests with `pytest`. There are 50 tests, and they need no API key or network.
+Run the tests with `pytest`. There are 65 tests, and they need no API key or network (the models are scripted fakes).
 
 Or with Docker: `docker build -t label-check . && docker run -p 8000:8000 -e ANTHROPIC_API_KEY=... label-check`
 
@@ -39,7 +39,7 @@ Or with Docker: `docker build -t label-check . && docker run -p 8000:8000 -e ANT
   Blank fields are skipped. The government warning is always checked.
 * **Check many labels:** upload a CSV (one row per label, with a `filename` column) and select
   all the images. Results stream in as they finish, and you can filter to just the problems and
-  download a results CSV. **Load the 9 example labels** runs a demo batch.
+  download a results CSV. **Load the example labels** runs a demo batch.
 
 Every result is one of:
 
@@ -53,116 +53,89 @@ Every result is one of:
 
 ## Approach
 
+**Every decision, with the options considered and the trade-offs, is in
+[docs/DESIGN.md](docs/DESIGN.md).** This is the short version.
+
 ```
- image ─► extraction ─────────────────────────► matching (pure Python) ─► verdict
-          ├─ Claude vision, JSON-schema output   ├─ text: exact / normalized / fuzzy
-          └─ fallback: Tesseract OCR (local)     ├─ ABV & volume: compared as numbers
-                                                 └─ warning: exact words, CAPS, bold
+                ┌─► primary AI reader   (claude-opus-5-5)  ─┐  both in parallel,
+ label image ───┤                                           ├─ 4.5 s deadline
+                └─► secondary AI reader (claude-haiku-5-5) ─┘
+                          │ nobody answered / network blocked
+                          └─► offline Tesseract OCR (deskewed)
+                                        │
+            matching rules (plain, tested Python) run on each reading
+                                        │
+          consensus: a field can only PASS if every reader passed it
+                                        │
+                   verdict per field: PASS · REVIEW · FAIL
 ```
 
-### Key decisions and trade-offs
+1. **The AI reads; code judges.** Models only transcribe into a fixed schema.
+   Pass/fail comes from deterministic, unit-tested rules, so verdicts are
+   explainable and a prompt change can't silently change policy. ([D2](docs/DESIGN.md#d2-the-ai-reads-plain-code-judges))
+2. **Two independent AI readers ("double-keying").** The dangerous error is a
+   *false PASS*, most likely caused by a model silently "fixing" a typo in the
+   warning. One reader can't catch its own silent fix, but a second, *different*
+   model rarely makes the same one. When they disagree, the field goes to
+   REVIEW with both readings shown. Cost isn't the driver: at about 2¢ a label,
+   150k labels a year is a few thousand dollars. ([D7](docs/DESIGN.md#d7-model-routing-two-independent-readers-double-keying), [D8](docs/DESIGN.md#d8-consensus-rules))
+3. **Hybrid AI + offline OCR.** This covers Marcus's firewall concern: if the API
+   is blocked, Tesseract runs locally, and the UI says so. OCR results are graded
+   more cautiously, because OCR can't tell its misreads from real typos or see
+   bold type. ([D4](docs/DESIGN.md#d4-hybrid-extraction-ai-first-offline-ocr-fallback), [D5](docs/DESIGN.md#d5-ocr-results-are-graded-more-cautiously))
+4. **5-second budget.** Readers run in parallel under a hard deadline, with low
+   thinking effort and downscaled images. **Real API latency is not yet measured**:
+   run the benchmark. ([D10](docs/DESIGN.md#d10-the-5-second-budget))
+5. **Judgment, not just pattern matching.** `STONE'S THROW` = `Stone's Throw`
+   (passes with a note), numbers are compared as numbers (`70 cl` = `700 mL`), and
+   the warning must match word-for-word, with a capitalized colon lead-in in bold.
+   ([D14](docs/DESIGN.md#d14-text-field-matching)–[D16](docs/DESIGN.md#d16-the-government-warning-check))
 
-**1. The AI reads, code judges.** Claude only *transcribes* the label into a fixed
-JSON schema (`ExtractedLabel`). Pass/fail is decided by deterministic, unit-tested
-rules in `app/matching.py` and `app/warning.py`.
-*Why:* compliance verdicts must be explainable and consistent. A prompt tweak
-can't silently change policy, and every rule has a test.
-*Trade-off:* the model's judgment goes unused for fuzzy cases. I handle those
-with an explicit **REVIEW** state instead.
+### Benchmark
 
-**2. Hybrid extraction: Claude first, offline OCR fallback.** Two interview
-notes conflict here. Marcus says the firewall blocks many ML endpoints. Jenny
-wants bad photos handled and bold type checked, which only a vision model does
-well. So:
-* With a key and network access, **Claude** reads the label. It handles angled,
-  curved or glary photos, and it can judge bold type.
-* If the call fails, times out (`CLAUDE_TIMEOUT_SECONDS`, default 8 s) or no key
-  is set, **Tesseract** runs locally. No network is needed, so it works behind
-  any firewall. The UI always says which reader was used and why.
-* `EXTRACTION_MODE=ocr` forces offline mode, and `=claude` disables the fallback.
+```bash
+ANTHROPIC_API_KEY=... python scripts/benchmark.py --runs 3   # real, billed API calls
+```
 
-**3. OCR results are graded more cautiously.** OCR can't tell a typo on the label
-from its own misread, and it can't prove something is absent. So in OCR mode:
-"not found" becomes REVIEW, a warning that differs only by look-alike words
-("alcahalic") becomes REVIEW, and a low-confidence read can't hard-fail.
-Genuine violations (title-case header, reworded warning, wrong ABV) still FAIL.
-OCR can't see font weight, so the bold check is always REVIEW in OCR mode.
-
-**4. Dave's "judgment" problem.** `STONE'S THROW` vs `Stone's Throw` passes,
-with a note that only the case differs. A one-letter difference is REVIEW,
-and anything else FAILs. Numbers are compared as numbers: `45% Alc./Vol.` =
-`45 % ALC/VOL`, `90 Proof` = 45%, and `70 cl` = `700 mL`. The label's own proof
-is also checked against its ABV.
-
-**5. The government warning (Jenny's point).** It is checked against the 27 CFR
-16.21 text word-for-word, with punctuation included and line breaks ignored.
-The `GOVERNMENT WARNING:` lead-in must be in capitals with a colon, and bold.
-On a mismatch, the UI shows a word-level diff of what's missing and what was added.
-
-**6. The 5-second budget.**
-* Claude is called with `effort: low` (less thinking, lower latency) and a
-  single retry. Images are downscaled to 1568 px and sent as JPEG.
-* The OCR path takes about 0.5–1 s per label.
-* The timeout guarantees the agent never waits on a hung API call.
-
-The default model is `claude-opus-5-5` for transcription accuracy. If measured
-latency is too high, set `LABEL_MODEL=claude-haiku-5-5`. It's the speed/cost
-lever, at some accuracy risk on hard photos. **I couldn't measure Claude
-latency in my build environment (no API key), so treat the 5 s claim for the
-AI path as unverified until it's measured.**
-
-**7. Batch = many single checks, run from the browser.** The browser keeps 4
-requests in flight and fills in the table as each finishes. The server caps
-concurrency separately.
-*Why:* no job queue, no database and no stored images, and the progress
-display comes for free.
-*Trade-off:* closing the tab stops the batch. A production version would use
-a server-side job queue. The 9-label demo batch finishes in about 2 s on 4
-cores in OCR mode.
-
-**8. Simple UI for every comfort level.** Plain HTML/CSS/JS with no build step.
-It uses 18 px base text, numbered steps, one big primary button, and status
-shown as text plus an icon, not color alone. It supports dark mode and works
-at phone width.
-
-### Things I fixed along the way
-
-* **Rotated photos defeated OCR.** I added a projection-profile deskew (Pillow
-  only): rotate a thumbnail through ±15° and keep the angle where the text rows
-  are sharpest. The angled, glary sample went from garbage to a correct read.
-* **Batch OCR hung.** Tesseract uses one OpenMP thread per core, so 4 parallel
-  jobs thrashed the CPU and were more than 60x slower. Setting
-  `OMP_THREAD_LIMIT=1` and capping OCR concurrency at the core count fixed it.
+This scores each model alone and each primary+secondary pairing on the 12 sample
+labels. It reports latency, exact warning transcription, silent corrections, bold
+detection, false PASSes, review rate and cost, and writes them to
+`docs/benchmark-results.md`. Use the results to choose `PRIMARY_MODEL`,
+`SECONDARY_MODEL` and `READ_DEADLINE_SECONDS`.
 
 ## Project layout
 
 ```
 app/
   main.py               HTTP routes (verify, parse-manifest, examples, health)
+  consensus.py          reconciles the two AI readers' verdicts
   models.py             ApplicationData / ExtractedLabel / VerificationResult
   matching.py           field comparison rules + overall verdict
   warning.py            canonical warning text, exact-match check, word diff
   config.py             env-var settings
   extraction/
-    __init__.py         reader selection + fallback
+    __init__.py         parallel readers under a deadline + OCR fallback
     claude_reader.py    Claude vision, schema-constrained output
     ocr_reader.py       Tesseract + deskew + application-guided field finding
     image.py            decode, EXIF-rotate, downscale
   static/               index.html, app.js, styles.css
-samples/                9 generated test labels + batch.csv (see "what_this_tests" column)
+samples/                12 generated test labels + batch.csv ("expected_result", "what_this_tests")
 scripts/generate_samples.py   regenerates the samples
-tests/                  matching/warning unit tests, API tests (real OCR, mocked Claude)
+scripts/benchmark.py    scores real models and pairings on the samples
+tests/                  rule + consensus unit tests, API tests (real OCR, scripted fake models)
+docs/DESIGN.md          decision log: every design choice and its trade-offs
 ```
 
 ## Configuration
 
 | Variable | Default | |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | – | Enables the AI reader |
+| `ANTHROPIC_API_KEY` | – | Enables the AI readers |
 | `EXTRACTION_MODE` | `auto` | `auto` / `claude` / `ocr` |
-| `LABEL_MODEL` | `claude-opus-5-5` | Model for the AI reader |
+| `PRIMARY_MODEL` | `claude-opus-5-5` | Most-trusted reader |
+| `SECONDARY_MODEL` | `claude-haiku-5-5` | Independent cross-check; `""` for a single reader |
 | `CLAUDE_EFFORT` | `low` | Thinking effort (latency vs. thoroughness) |
-| `CLAUDE_TIMEOUT_SECONDS` | `8` | After this, fall back to OCR |
+| `READ_DEADLINE_SECONDS` | `4.5` | Readers still running at this point are dropped |
 | `MAX_CONCURRENCY` | `8` | Simultaneous extractions per server |
 | `MAX_UPLOAD_MB` | `15` | Upload size limit |
 

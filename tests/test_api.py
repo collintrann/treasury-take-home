@@ -4,6 +4,7 @@ The OCR tests run real Tesseract on the bundled sample labels. The Claude
 reader is mocked, so the suite needs no API key and no network.
 """
 
+import asyncio
 import csv
 import io
 from pathlib import Path
@@ -45,19 +46,40 @@ def ocr_only(monkeypatch):
 
 @pytest.fixture
 def fake_claude(monkeypatch):
-    """Pretend a key is configured and make the Claude call return ``label``."""
+    """Pretend a key is configured and script each model's answer.
+
+    Set ``state[model]`` to an ExtractedLabel, an Exception to raise, or a
+    ("sleep", seconds, label) tuple to simulate a slow model.
+    """
     monkeypatch.setattr(config, "EXTRACTION_MODE", "auto")
     monkeypatch.setattr(config, "claude_configured", lambda: True)
+    monkeypatch.setattr(config, "PRIMARY_MODEL", "primary-model")
+    monkeypatch.setattr(config, "SECONDARY_MODEL", "secondary-model")
     state = {}
 
-    async def fake(jpeg: bytes):
+    async def fake(jpeg: bytes, model: str, usage=None):
         assert jpeg[:2] == b"\xff\xd8", "should upload a JPEG"
-        if isinstance(state.get("result"), Exception):
-            raise state["result"]
-        return state["result"]
+        result = state[model]
+        if isinstance(result, tuple):
+            _, seconds, result = result
+            await asyncio.sleep(seconds)
+        if isinstance(result, Exception):
+            raise result
+        return result
 
     monkeypatch.setattr(extraction, "extract_with_claude", fake)
     return state
+
+
+GOOD = ExtractedLabel(
+    brand_name="OLD TOM DISTILLERY",
+    class_type="Kentucky Straight Bourbon Whiskey",
+    alcohol_content="45% Alc./Vol. (90 Proof)",
+    net_contents="750 mL",
+    producer_name_address="Bottled by Old Tom Distillery, Bardstown, KY",
+    government_warning=FULL_TEXT,
+    warning_header_bold=True,
+)
 
 
 # ----------------------------------------------------------------- OCR, real
@@ -90,32 +112,74 @@ def test_ocr_compliant_label_only_flags_boldness(ocr_only):
 
 # ---------------------------------------------------------- Claude, mocked
 
-def test_claude_result_is_used(fake_claude):
-    fake_claude["result"] = ExtractedLabel(
-        brand_name="OLD TOM DISTILLERY",
-        class_type="Kentucky Straight Bourbon Whiskey",
-        alcohol_content="45% Alc./Vol. (90 Proof)",
-        net_contents="750 mL",
-        producer_name_address="Bottled by Old Tom Distillery, Bardstown, KY",
-        government_warning=FULL_TEXT,
-        warning_header_bold=True,
-    )
+def test_both_readers_agree_passes(fake_claude):
+    fake_claude["primary-model"] = GOOD
+    fake_claude["secondary-model"] = GOOD
     body = post_sample("01_old_tom_compliant.png").json()
     assert body["extraction_method"] == "claude"
+    assert body["readers"] == ["primary-model", "secondary-model"]
     assert body["overall"] == "pass"
+    assert {f["agreement"] for f in body["fields"]} == {"agreed"}
 
 
-def test_falls_back_to_ocr_when_claude_fails(fake_claude):
-    fake_claude["result"] = ClaudeExtractionError("could not reach the AI service (network blocked?)")
+def test_silent_correction_is_caught_by_disagreement(fake_claude):
+    # The label has a typo. The primary reads it faithfully; the secondary
+    # "fixes" it. Neither model alone is trusted with a PASS here.
+    typo = FULL_TEXT.replace("Surgeon General", "Surgeon Generel")
+    fake_claude["primary-model"] = GOOD.model_copy(update={"government_warning": typo})
+    fake_claude["secondary-model"] = GOOD
+    body = post_sample("01_old_tom_compliant.png").json()  # application data matches GOOD
+    warning = next(f for f in body["fields"] if f["field"] == "government_warning")
+    assert warning["status"] == "review"
+    assert warning["agreement"] == "disputed"
+    assert [r["status"] for r in warning["readings"]] == ["fail", "pass"]
+    assert {"op": "missing", "text": "General,"} in warning["diff"]  # points the agent at the word
+    assert body["overall"] == "review"
+
+
+def test_slow_secondary_is_dropped_at_deadline(fake_claude, monkeypatch):
+    monkeypatch.setattr(config, "READ_DEADLINE_SECONDS", 0.3)
+    fake_claude["primary-model"] = GOOD
+    fake_claude["secondary-model"] = ("sleep", 5, GOOD)
+    res = post_sample("01_old_tom_compliant.png")
+    body = res.json()
+    assert body["readers"] == ["primary-model"]
+    assert body["overall"] == "pass"  # the strong reader alone is trusted
+    assert "not double-checked" in body["extraction_note"]
+    assert body["elapsed_ms"] < 2000  # we didn't wait for the slow one
+
+
+def test_secondary_alone_cannot_pass_the_warning(fake_claude):
+    fake_claude["primary-model"] = ClaudeExtractionError("AI service error 529")
+    fake_claude["secondary-model"] = GOOD
+    body = post_sample("01_old_tom_compliant.png").json()
+    warning = next(f for f in body["fields"] if f["field"] == "government_warning")
+    assert warning["status"] == "review" and warning["agreement"] == "single"
+    assert body["overall"] == "review"
+
+
+def test_falls_back_to_ocr_when_all_readers_fail(fake_claude):
+    fake_claude["primary-model"] = ClaudeExtractionError("could not reach the AI service (network blocked?)")
+    fake_claude["secondary-model"] = ClaudeExtractionError("could not reach the AI service (network blocked?)")
     body = post_sample("04_wrong_abv.png").json()
     assert body["extraction_method"] == "ocr"
     assert "network blocked" in body["extraction_note"]
     assert body["overall"] == "fail"
 
 
+def test_single_reader_mode(fake_claude, monkeypatch):
+    monkeypatch.setattr(config, "SECONDARY_MODEL", "")
+    fake_claude["primary-model"] = GOOD
+    body = post_sample("01_old_tom_compliant.png").json()
+    assert body["readers"] == ["primary-model"]
+    assert body["overall"] == "pass"
+    assert body["extraction_note"] == ""  # single reader by choice isn't a degradation
+
+
 def test_claude_only_mode_surfaces_error(fake_claude, monkeypatch):
     monkeypatch.setattr(config, "EXTRACTION_MODE", "claude")
-    fake_claude["result"] = ClaudeExtractionError("AI reader timed out")
+    fake_claude["primary-model"] = ClaudeExtractionError("AI reader timed out")
+    fake_claude["secondary-model"] = ClaudeExtractionError("AI reader timed out")
     res = post_sample("01_old_tom_compliant.png")
     assert res.status_code == 502
     assert "timed out" in res.json()["detail"]
@@ -174,7 +238,7 @@ def test_parse_manifest_requires_filename_column():
 
 
 def test_examples_and_static():
-    assert len(client.get("/api/examples").json()) == 9
+    assert len(client.get("/api/examples").json()) == 12
     assert client.get("/").status_code == 200
     assert client.get("/samples/01_old_tom_compliant.png").status_code == 200
     assert client.get("/api/health").json()["status"] == "ok"

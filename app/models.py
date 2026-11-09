@@ -89,12 +89,19 @@ class FieldResult(BaseModel):
     status: Status
     note: str = ""  # plain-English explanation for the agent
     diff: Optional[list[dict]] = None  # word diff, only for the warning
+    # Two-reader consensus (AI path only):
+    #   "agreed"   - both readers reached the same verdict
+    #   "disputed" - one reader passed it and the other didn't -> forced to REVIEW
+    #   "single"   - only one reader answered; not double-checked
+    agreement: Optional[str] = None
+    readings: Optional[list[dict]] = None  # each reader's view, shown when disputed
 
 
 class VerificationResult(BaseModel):
     overall: Status
     fields: list[FieldResult]
     extraction_method: str  # "claude" or "ocr"
+    readers: list[str] = []  # models that answered in time (AI path)
     extraction_note: str = ""  # e.g. why we fell back to OCR
     elapsed_ms: int
     filename: Optional[str] = None

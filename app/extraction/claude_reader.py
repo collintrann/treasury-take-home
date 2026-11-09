@@ -39,15 +39,17 @@ _client: anthropic.AsyncAnthropic | None = None
 def _get_client() -> anthropic.AsyncAnthropic:
     global _client
     if _client is None:
-        # One retry: it covers a transient blip but stays inside the latency budget.
-        _client = anthropic.AsyncAnthropic(timeout=config.CLAUDE_TIMEOUT_SECONDS, max_retries=1)
+        # One retry covers a fast transient error (429/5xx); the caller's deadline
+        # still bounds the total wait, so a retry can never blow the budget.
+        _client = anthropic.AsyncAnthropic(timeout=config.READ_DEADLINE_SECONDS, max_retries=1)
     return _client
 
 
-async def extract_with_claude(jpeg: bytes) -> ExtractedLabel:
+async def extract_with_claude(jpeg: bytes, model: str, usage: dict | None = None) -> ExtractedLabel:
+    """Transcribe a label with ``model``. If ``usage`` is given, token counts are written into it."""
     try:
         response = await _get_client().messages.parse(
-            model=config.MODEL,
+            model=model,
             max_tokens=4096,
             system=SYSTEM_PROMPT,
             output_config={"effort": config.EFFORT},
@@ -81,6 +83,9 @@ async def extract_with_claude(jpeg: bytes) -> ExtractedLabel:
     except anthropic.APIStatusError as exc:
         raise ClaudeExtractionError(f"AI service error {exc.status_code}") from exc
 
+    if usage is not None:
+        usage["input_tokens"] = response.usage.input_tokens
+        usage["output_tokens"] = response.usage.output_tokens
     if response.stop_reason == "refusal":
         raise ClaudeExtractionError("AI reader declined this image")
     if response.stop_reason == "max_tokens" or response.parsed_output is None:
