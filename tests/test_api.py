@@ -15,13 +15,13 @@ from fastapi.testclient import TestClient
 from app import config, extraction
 from app.extraction.claude_reader import ClaudeExtractionError
 from app.main import app
-from app.models import Application, CheckResult, ExtractedLabel, QueueDetail, QueueItem
+from app.models import MAX_LABEL_IMAGES, Application, CheckResult, ExtractedLabel, QueueDetail, QueueItem
 from app.queue import QUEUE_DIR, load_queue
 from app.warning import FULL_TEXT
 
 client = TestClient(app)
-FIRST = next(iter(load_queue().values()))  # COLA-26-0001, a clean bourbon label
-IMAGE = QUEUE_DIR / FIRST.image
+FIRST = load_queue()["COLA-26-0001"]  # a clean bourbon label
+IMAGE = QUEUE_DIR / FIRST.images[0]
 UNAVAILABLE = "We couldn't read this label right now. Please try again in a minute."
 
 
@@ -35,10 +35,11 @@ def fake_readers(monkeypatch):
     monkeypatch.setattr(config, "claude_configured", lambda: True)
     monkeypatch.setattr(config, "PRIMARY_MODEL", "primary-model")
     monkeypatch.setattr(config, "SECONDARY_MODEL", "secondary-model")
-    state = {}
+    state = {"images_sent": {}}
 
-    async def fake(jpeg: bytes, model: str, usage=None):
-        assert jpeg[:2] == b"\xff\xd8", "should upload a JPEG"
+    async def fake(jpegs: list[bytes], model: str, usage=None):
+        assert all(jpeg[:2] == b"\xff\xd8" for jpeg in jpegs), "should upload JPEGs"
+        state["images_sent"][model] = len(jpegs)
         result = state[model]
         if isinstance(result, tuple):
             _, seconds, result = result
@@ -68,10 +69,10 @@ GOOD = ExtractedLabel(
 TYPO = GOOD.model_copy(update={"government_warning": FULL_TEXT.replace("Surgeon General", "Surgeon Generel")})
 
 
-def post_check(product_type="distilled_spirits", image_path=IMAGE, **fields):
+def post_check(product_type="distilled_spirits", image_paths=(IMAGE,), **fields):
     data = {"product_type": product_type, **(FIRST.application.model_dump() | fields)}
-    with open(image_path, "rb") as img:
-        return client.post("/api/check", files={"image": (image_path.name, img, "image/png")}, data=data)
+    files = [("images", (path.name, path.read_bytes(), "image/png")) for path in image_paths]
+    return client.post("/api/check", files=files, data=data)
 
 
 def findings(body: dict) -> dict:
@@ -95,9 +96,11 @@ def test_queue_never_reveals_test_answers():
 
 
 def test_queue_images_are_served():
-    item = client.get("/api/queue").json()[0]
-    res = client.get(item["image"])
-    assert res.status_code == 200 and res.headers["content-type"] == "image/png"
+    for item in client.get("/api/queue").json():
+        assert 1 <= len(item["images"]) <= MAX_LABEL_IMAGES
+        for url in item["images"]:
+            res = client.get(url)
+            assert res.status_code == 200 and res.headers["content-type"].startswith("image/"), url
     assert client.get("/samples/%2e%2e/app/config.py").status_code == 404
     assert client.get("/samples/queue/%2e%2e/%2e%2e/app/config.py").status_code == 404
 
@@ -121,6 +124,15 @@ def test_check_queued_application(fake_readers):
     assert res.status_code == 200, res.text
     body = CheckResult.model_validate(res.json())
     assert body.overall == "pass" and body.image_assessable
+
+
+def test_upload_sends_every_image_and_caps_the_count(fake_readers):
+    fake_readers["primary-model"] = GOOD
+    fake_readers["secondary-model"] = GOOD
+    assert post_check(image_paths=(IMAGE, IMAGE)).status_code == 200
+    assert fake_readers["images_sent"] == {"primary-model": 2, "secondary-model": 2}
+    res = post_check(image_paths=(IMAGE,) * (MAX_LABEL_IMAGES + 1))
+    assert res.status_code == 400 and str(MAX_LABEL_IMAGES) in res.json()["detail"]
 
 
 # ----------------------------------------------------------- uploaded check
@@ -229,7 +241,7 @@ def test_503_without_api_key(fake_readers, monkeypatch):
 def test_rejects_non_image(fake_readers):
     res = client.post(
         "/api/check",
-        files={"image": ("notes.txt", io.BytesIO(b"hello"), "text/plain")},
+        files={"images": ("notes.txt", io.BytesIO(b"hello"), "text/plain")},
         data={"product_type": "wine", "brand_name": "X"},
     )
     assert res.status_code == 400

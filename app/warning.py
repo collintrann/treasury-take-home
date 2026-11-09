@@ -29,7 +29,7 @@ FULL_TEXT = f"{HEADER} {BODY}"
 # can be judged separately from the wording.
 _HEADER_RE = re.compile(r"government\s+warning\s*:?", re.IGNORECASE)
 
-NO_WARNING = "No warning was found in this image to check."
+NO_WARNING = "No warning was found on the label images to check."
 
 
 def _tokens(text: str) -> list[str]:
@@ -149,7 +149,7 @@ def warning_findings(label: ExtractedLabel) -> list[Finding]:
     if not found:
         present = _finding(
             "warning_present", "Warning present", "needs_review",
-            "The warning wasn't found in this image. It may be on another part of the label.",
+            "The warning wasn't found on the label images. Please check the label.",
         )
         rest = [
             _finding("warning_wording", "Warning wording", "not_evaluated", NO_WARNING, expected=BODY),

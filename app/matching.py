@@ -6,8 +6,8 @@
 * Alcohol content and net contents are compared as numbers, so "90 Proof"
   equals 45% and 0.75 L equals 750 mL.
 * Which fields apply depends on the product type (``_not_evaluated_reason``).
-  A field missing from the photo is needs_review, never fail: it may be on
-  another panel of the label.
+  A field missing from the label images is needs_review, never fail: the panel
+  that shows it may be missing or hard to read.
 """
 
 from __future__ import annotations
@@ -225,7 +225,7 @@ def application_findings(product_type: ProductType, app: Application, label: Ext
         if reason:
             status, explanation = "not_evaluated", reason
         elif found is None:
-            status, explanation = "needs_review", "Not found in this image. It may be on another part of the label."
+            status, explanation = "needs_review", "Not found on the label images. Please check the label."
         else:
             status, explanation = _compare(key, expected, found)
         findings.append(

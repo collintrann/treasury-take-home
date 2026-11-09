@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { CheckPanel } from "@/components/check-panel";
 import { DecisionBar } from "@/components/decision-bar";
 import { ErrorNotice } from "@/components/error-notice";
-import { LabelImage } from "@/components/label-image";
+import { LabelPanels } from "@/components/label-panels";
 import { getApplication, getQueue, type QueueItem, type QueuedApplication } from "@/lib/api";
 import { APPLICATION_FIELDS, PRODUCT_TYPES } from "@/lib/fields";
 import { applicationHref, formatDate, oldestFirst } from "@/lib/queue";
@@ -79,7 +79,7 @@ function Review({ id }: { id: string }) {
             <h2 id="label-title" className="text-2xl font-bold">
               Label
             </h2>
-            <LabelImage src={application.image} alt={`Label artwork for ${application.application.brand_name || id}`} />
+            <LabelPanels images={application.images} brand={application.application.brand_name || id} />
           </section>
           <ApplicationDetails application={application} />
         </div>

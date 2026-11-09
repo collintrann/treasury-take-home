@@ -7,7 +7,47 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-export function LabelImage({ src, alt }: { src: string; alt: string }) {
+// An application's label artwork, often split into front, back and neck
+// panels. The chosen panel is shown large; the others are thumbnails.
+export function LabelPanels({ images, brand }: { images: string[]; brand: string }) {
+  const [shown, setShown] = useState(0);
+  const count = images.length;
+  const panelName = (index: number) => (count === 1 ? "Label image" : `Label panel ${index + 1} of ${count}`);
+
+  return (
+    <div className="grid gap-3">
+      <LabelImage
+        src={images[shown]}
+        title={panelName(shown)}
+        alt={`${panelName(shown)}, label artwork for ${brand}`}
+        caption={
+          count === 1
+            ? "Label as submitted. Click the image to enlarge it."
+            : `Panel ${shown + 1} of ${count} as submitted. Click the image to enlarge it, or choose another panel below.`
+        }
+      />
+      {count > 1 && (
+        <ul aria-label="Label panels" className="flex flex-wrap gap-3">
+          {images.map((src, index) => (
+            <li key={src}>
+              <Button
+                variant="outline"
+                aria-label={panelName(index)}
+                aria-pressed={index === shown}
+                onClick={() => setShown(index)}
+                className="relative size-24 bg-muted p-0 aria-pressed:border-3 aria-pressed:border-foreground"
+              >
+                <Image src={src} alt="" fill unoptimized sizes="6rem" className="object-contain p-1.5" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function LabelImage({ src, title, alt, caption }: { src: string; title: string; alt: string; caption: string }) {
   const [actualSize, setActualSize] = useState(false);
 
   return (
@@ -20,7 +60,7 @@ export function LabelImage({ src, alt }: { src: string; alt: string }) {
             Zoom
           </span>
         </DialogTrigger>
-        <figcaption className="text-muted-foreground">Label as submitted. Click the image to enlarge it.</figcaption>
+        <figcaption className="text-muted-foreground">{caption}</figcaption>
       </figure>
 
       <DialogContent
@@ -29,7 +69,7 @@ export function LabelImage({ src, alt }: { src: string; alt: string }) {
         className="inset-0 top-0 left-0 grid h-dvh max-w-none translate-x-0 translate-y-0 grid-rows-[auto_1fr] gap-0 rounded-none bg-background p-0 sm:inset-4 sm:h-auto sm:max-w-none sm:rounded-xl"
       >
         <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-          <DialogTitle className="mr-auto pr-0">Label image</DialogTitle>
+          <DialogTitle className="mr-auto pr-0">{title}</DialogTitle>
           <Button variant="outline" onClick={() => setActualSize(!actualSize)}>
             {actualSize ? <Maximize aria-hidden /> : <ZoomIn aria-hidden />}
             {actualSize ? "Fit to screen" : "Actual size"}

@@ -19,7 +19,7 @@ from .consensus import decide
 from .extraction import ClaudeExtractionError, InvalidImageError, extract
 from .extraction.claude_reader import extract_with_claude
 from .extraction.image import load_image, to_upload_jpeg
-from .models import Application, CheckResult, ProductType, QueueDetail, QueueEntry, QueueItem
+from .models import MAX_LABEL_IMAGES, Application, CheckResult, ProductType, QueueDetail, QueueEntry, QueueItem
 from .queue import QUEUE_DIR, SAMPLES_DIR, as_detail, as_item, load_queue
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -39,11 +39,11 @@ async def _warm_up() -> None:
     entry = next(iter(load_queue().values()), None)
     if entry is None:
         return
-    jpeg = to_upload_jpeg(load_image((QUEUE_DIR / entry.image).read_bytes()))
+    jpegs = [to_upload_jpeg(load_image((QUEUE_DIR / name).read_bytes())) for name in entry.images]
     for model, _ in config.reader_models():
         started = time.perf_counter()
         try:
-            await extract_with_claude(jpeg, model, timeout=WARM_UP_TIMEOUT_SECONDS)
+            await extract_with_claude(jpegs, model, timeout=WARM_UP_TIMEOUT_SECONDS)
             log.info("warm-up read with %s took %.1f s", model, time.perf_counter() - started)
         except ClaudeExtractionError as exc:
             log.warning("warm-up read with %s failed: %s", model, exc)
@@ -94,11 +94,13 @@ def health() -> dict:
     }
 
 
-async def run_check(data: bytes, product_type: ProductType, application: Application, name: str) -> CheckResult:
+async def run_check(
+    images: list[bytes], product_type: ProductType, application: Application, name: str
+) -> CheckResult:
     started = time.perf_counter()
     try:
         async with _slots:
-            readings = await extract(data)
+            readings = await extract(images)
     except InvalidImageError as exc:
         raise HTTPException(400, str(exc)) from exc
     except ClaudeExtractionError as exc:
@@ -108,8 +110,9 @@ async def run_check(data: bytes, product_type: ProductType, application: Applica
     result = decide(product_type, application, readings)
     result.elapsed_ms = int((time.perf_counter() - started) * 1000)
     log.info(
-        "checked %s via %s in %d ms -> %s%s",
+        "checked %s (%d images) via %s in %d ms -> %s%s",
         name,
+        len(images),
         ",".join(r.model for r in readings),
         result.elapsed_ms,
         result.overall,
@@ -120,7 +123,7 @@ async def run_check(data: bytes, product_type: ProductType, application: Applica
 
 @app.post("/api/check", response_model=CheckResult)
 async def check_upload(
-    image: UploadFile | None = File(None),
+    images: list[UploadFile] | None = File(None),
     product_type: str = Form(""),
     brand_name: str = Form(""),
     class_type: str = Form(""),
@@ -129,11 +132,13 @@ async def check_upload(
     producer_name_address: str = Form(""),
     country_of_origin: str = Form(""),
 ) -> CheckResult:
-    if image is None:
+    if not images:
         raise HTTPException(400, "Choose a label image to check.")
-    data = await image.read(config.MAX_UPLOAD_BYTES + 1)
-    if len(data) > config.MAX_UPLOAD_BYTES:
-        raise HTTPException(413, f"The image is too large (limit {config.MAX_UPLOAD_BYTES // (1024 * 1024)} MB).")
+    if len(images) > MAX_LABEL_IMAGES:
+        raise HTTPException(400, f"Choose at most {MAX_LABEL_IMAGES} label images.")
+    data = [await image.read(config.MAX_UPLOAD_BYTES + 1) for image in images]
+    if any(len(d) > config.MAX_UPLOAD_BYTES for d in data):
+        raise HTTPException(413, f"An image is too large (limit {config.MAX_UPLOAD_BYTES // (1024 * 1024)} MB).")
     if product_type not in PRODUCT_TYPES:
         raise HTTPException(400, "Choose whether this is distilled spirits, wine or a malt beverage.")
 
@@ -147,7 +152,7 @@ async def check_upload(
     )
     if not any(v.strip() for v in application.model_dump().values()):
         raise HTTPException(400, "Enter at least one application field to compare against.")
-    return await run_check(data, product_type, application, image.filename or "upload")
+    return await run_check(data, product_type, application, images[0].filename or "upload")
 
 
 def _queued(application_id: str) -> QueueEntry:
@@ -171,7 +176,7 @@ def queue_detail(application_id: str) -> QueueDetail:
 async def check_queued(application_id: str) -> CheckResult:
     entry = _queued(application_id)
     try:
-        data = (QUEUE_DIR / entry.image).read_bytes()
+        data = [(QUEUE_DIR / name).read_bytes() for name in entry.images]
     except OSError as exc:
         log.error("queue image missing for %s: %s", entry.id, exc)
         raise HTTPException(404, "We couldn't find the label for that application.") from exc

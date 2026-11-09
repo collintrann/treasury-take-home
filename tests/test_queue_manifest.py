@@ -18,13 +18,16 @@ def test_committed_manifest_matches_the_generator():
 
 def test_every_queue_image_exists():
     for entry in load_queue().values():
-        assert (QUEUE_DIR / entry.image).is_file(), entry.image
+        for name in entry.images:
+            assert (QUEUE_DIR / name).is_file(), name
 
 
 def test_queue_mix():
     entries = list(load_queue().values())
-    assert Counter(e.product_type for e in entries) == {"distilled_spirits": 10, "wine": 8, "malt_beverage": 7}
-    outcomes = Counter(e.expected_overall for e in entries)
-    assert 0.5 <= outcomes["pass"] / len(entries) <= 0.6
-    assert outcomes["fail"] and outcomes["needs_review"]
     assert len({e.id for e in entries}) == len(entries)
+
+    generated = [e for e in entries if e.expected_overall is not None]
+    assert Counter(e.product_type for e in generated) == {"distilled_spirits": 10, "wine": 8, "malt_beverage": 7}
+    outcomes = Counter(e.expected_overall for e in generated)
+    assert 0.5 <= outcomes["pass"] / len(generated) <= 0.6
+    assert outcomes["fail"] and outcomes["needs_review"]

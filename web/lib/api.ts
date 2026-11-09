@@ -9,8 +9,8 @@ export interface QueueItem {
   applicant: string;
   product_type: ProductType;
   brand_name: string;
-  // A same-origin path such as /samples/queue/COLA-26-0001.png.
-  image: string;
+  // Same-origin paths such as /samples/queue/COLA-26-0001.png, front panel first.
+  images: string[];
 }
 
 export interface QueuedApplication extends Omit<QueueItem, "brand_name"> {

@@ -16,6 +16,9 @@ ProductType = Literal["distilled_spirits", "wine", "malt_beverage"]
 Status = Literal["pass", "fail", "needs_review", "not_evaluated"]
 Overall = Literal["pass", "fail", "needs_review"]
 
+# Real applications split the label across front, back and neck panels.
+MAX_LABEL_IMAGES = 6
+
 
 class Application(BaseModel):
     """What the application says. Blank means the applicant didn't give it."""
@@ -58,7 +61,7 @@ class QueueItem(BaseModel):
     applicant: str
     product_type: ProductType
     brand_name: str
-    image: str  # URL path, e.g. /samples/queue/COLA-26-0001.png
+    images: list[str]  # URL paths, e.g. /samples/queue/COLA-26-0001.png, front panel first
 
 
 class QueueDetail(BaseModel):
@@ -66,7 +69,7 @@ class QueueDetail(BaseModel):
     submitted_at: dt.date
     applicant: str
     product_type: ProductType
-    image: str
+    images: list[str]
     application: Application
 
 
@@ -77,7 +80,7 @@ class QueueEntry(BaseModel):
     submitted_at: dt.date
     applicant: str
     product_type: ProductType
-    image: str  # file name inside samples/queue/
+    images: list[str] = Field(min_length=1, max_length=MAX_LABEL_IMAGES)  # file names inside samples/queue/
     application: Application
     expected_overall: Overall
     scenario: str
@@ -138,11 +141,11 @@ class ExtractedLabel(BaseModel):
         "false if it is faint, low-contrast or hard to read; null if you cannot tell.",
     )
     image_readable: bool = Field(
-        description="True if the photo is clear enough to read all of its text with confidence. False if "
-        "blur, glare, darkness, low resolution or cropping leave any of the text uncertain."
+        description="True if the images are clear enough to read all of the label's text with confidence. "
+        "False if blur, glare, darkness, low resolution or cropping leave any of the text uncertain."
     )
     image_issues: Optional[str] = Field(
         None,
-        description="One short plain sentence for a reviewer about anything in the photo that made reading "
+        description="One short plain sentence for a reviewer about anything in the images that made reading "
         "hard (glare, angle, blur), or null.",
     )

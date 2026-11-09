@@ -23,8 +23,8 @@ def load_queue() -> dict[str, QueueEntry]:
     return {e.id: e for e in sorted(entries, key=lambda e: (e.submitted_at, e.id))}
 
 
-def image_url(entry: QueueEntry) -> str:
-    return f"/samples/queue/{entry.image}"
+def image_urls(entry: QueueEntry) -> list[str]:
+    return [f"/samples/queue/{name}" for name in entry.images]
 
 
 def as_item(entry: QueueEntry) -> QueueItem:
@@ -34,7 +34,7 @@ def as_item(entry: QueueEntry) -> QueueItem:
         applicant=entry.applicant,
         product_type=entry.product_type,
         brand_name=entry.application.brand_name,
-        image=image_url(entry),
+        images=image_urls(entry),
     )
 
 
@@ -44,6 +44,6 @@ def as_detail(entry: QueueEntry) -> QueueDetail:
         submitted_at=entry.submitted_at,
         applicant=entry.applicant,
         product_type=entry.product_type,
-        image=image_url(entry),
+        images=image_urls(entry),
         application=entry.application,
     )

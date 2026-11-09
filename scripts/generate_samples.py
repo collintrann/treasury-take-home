@@ -82,7 +82,7 @@ class Case:
             submitted_at=dt.date.fromisoformat(self.submitted_at),
             applicant=self.applicant,
             product_type=self.product_type,
-            image=f"{self.id}.png",
+            images=[f"{self.id}.png"],
             application=default_application(self.printed).model_copy(update=self.application),
             expected_overall=self.expected_overall,
             scenario=self.scenario,

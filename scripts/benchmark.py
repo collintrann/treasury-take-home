@@ -90,11 +90,11 @@ def overall_for(entry: QueueEntry, readings: list[Reading]) -> str:
     return decide(entry.product_type, entry.application, readings).overall
 
 
-async def timed_call(model: str, entry: QueueEntry, run: int, jpeg: bytes) -> Call:
+async def timed_call(model: str, entry: QueueEntry, run: int, jpegs: list[bytes]) -> Call:
     usage: dict = {}
     start = time.perf_counter()
     try:
-        result = await extract_with_claude(jpeg, model, usage=usage)
+        result = await extract_with_claude(jpegs, model, usage=usage)
         return Call(model, entry, run, time.perf_counter() - start, result, None, usage)
     except Exception as exc:  # benchmark records every failure rather than stopping
         return Call(model, entry, run, time.perf_counter() - start, None, str(exc), usage)
@@ -215,7 +215,7 @@ async def main() -> None:
     config.EFFORT = args.effort
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     entries = list(load_queue().values())
-    jpegs = {e.id: to_upload_jpeg(load_image((QUEUE_DIR / e.image).read_bytes())) for e in entries}
+    jpegs = {e.id: [to_upload_jpeg(load_image((QUEUE_DIR / name).read_bytes())) for name in e.images] for e in entries}
 
     calls: list[Call] = []
     total = args.runs * len(entries)

@@ -21,8 +21,11 @@ Transcribe what is printed. Do not fix, normalize or complete anything:
 - Keep the label's capitalization, punctuation and spelling, typos included. \
 A reviewer compares your transcription to the required text, so a "corrected" \
 transcription hides the very errors they are looking for.
-- If a field is not visible in this image, return null. Do not guess it from \
-context. It may be on another panel of the label.
+- The images are the label panels of one container, such as the front, back \
+and neck labels. A field may be on any panel, so read every image. If a \
+field appears on more than one panel, transcribe the clearest one.
+- If a field is not visible in any image, return null. Do not guess it from \
+context.
 - The photo may be angled, curved around a bottle, glary or low-contrast. Read \
 through that where you can, and say what got in the way in image_issues, \
 written for a reviewer and describing only the photo.
@@ -52,10 +55,18 @@ def _get_client() -> anthropic.AsyncAnthropic:
     return _client
 
 
+def _image_block(jpeg: bytes) -> dict:
+    return {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.standard_b64encode(jpeg).decode("ascii")},
+    }
+
+
 async def extract_with_claude(
-    jpeg: bytes, model: str, usage: dict | None = None, timeout: float | None = None
+    jpegs: list[bytes], model: str, usage: dict | None = None, timeout: float | None = None
 ) -> ExtractedLabel:
-    """Transcribe a label with ``model``. If ``usage`` is given, token counts are written into it."""
+    """Transcribe one container's label panels with ``model``. If ``usage`` is given, token counts are written into it."""
+    panels = "this label panel" if len(jpegs) == 1 else f"these {len(jpegs)} panels of one container's label"
     client = _get_client() if timeout is None else _get_client().with_options(timeout=timeout)
     try:
         response = await client.messages.parse(
@@ -68,15 +79,8 @@ async def extract_with_claude(
                 {
                     "role": "user",
                     "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": base64.standard_b64encode(jpeg).decode("ascii"),
-                            },
-                        },
-                        {"type": "text", "text": "Transcribe this label's fields."},
+                        *(_image_block(jpeg) for jpeg in jpegs),
+                        {"type": "text", "text": f"Transcribe the label's fields from {panels}."},
                     ],
                 }
             ],
