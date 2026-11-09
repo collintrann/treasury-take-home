@@ -6,11 +6,12 @@ import asyncio
 import csv
 import io
 import logging
+import secrets
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
@@ -30,6 +31,16 @@ app = FastAPI(title="Label Check", docs_url="/api/docs", redoc_url=None)
 # Caps simultaneous extractions so a 300-label batch can't exhaust API rate
 # limits or the box's CPU. Extra requests wait their turn.
 _slots = asyncio.Semaphore(config.MAX_CONCURRENCY)
+
+
+@app.middleware("http")
+async def require_checker_secret(request: Request, call_next):
+    path = request.url.path
+    if config.CHECKER_SECRET and path.startswith("/api/") and path != "/api/health":
+        given = request.headers.get("X-Checker-Secret", "")
+        if not secrets.compare_digest(given, config.CHECKER_SECRET):
+            return JSONResponse({"detail": "Not allowed."}, status_code=401)
+    return await call_next(request)
 
 
 @app.get("/api/health")

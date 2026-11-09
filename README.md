@@ -83,6 +83,7 @@ Set in `.env`. Only the API key is required.
 | `READ_DEADLINE_SECONDS` | `4.5` | Readers still running after this are dropped |
 | `MAX_CONCURRENCY` | `8` | Labels checked at once per server |
 | `MAX_UPLOAD_MB` | `15` | Upload size limit |
+| `CHECKER_SECRET` | none | When set, API calls must send it in the `X-Checker-Secret` header |
 
 ## Limitations
 

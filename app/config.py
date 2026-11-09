@@ -38,6 +38,10 @@ MAX_UPLOAD_BYTES = int(_float("MAX_UPLOAD_MB", 15) * 1024 * 1024)
 # How many labels the server will process at the same time.
 MAX_CONCURRENCY = int(_float("MAX_CONCURRENCY", 8))
 
+# When set, every /api route except health requires this value in the
+# X-Checker-Secret header, so only our front end can spend API credits.
+CHECKER_SECRET = os.environ.get("CHECKER_SECRET", "")
+
 
 def reader_models() -> list[tuple[str, str]]:
     """[(model, role)] for the AI readers, primary first."""

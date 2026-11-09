@@ -235,3 +235,11 @@ def test_ui_source_never_mentions_internals():
     strings = re.findall(r"`[^`]*`|\"[^\"]*\"", (static / "app.js").read_text())
     for text in [visible, *strings]:
         assert not re.search(r"\b(AI|OCR|Claude|Opus|Haiku|Sonnet|model)\b", text), text
+
+
+def test_checker_secret_is_required_when_configured(monkeypatch):
+    monkeypatch.setattr(config, "CHECKER_SECRET", "s3cret")
+    assert client.get("/api/examples").status_code == 401
+    assert client.get("/api/examples", headers={"X-Checker-Secret": "wrong"}).status_code == 401
+    assert client.get("/api/examples", headers={"X-Checker-Secret": "s3cret"}).status_code == 200
+    assert client.get("/api/health").status_code == 200
