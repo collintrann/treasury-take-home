@@ -13,7 +13,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import benchmark as bm  # noqa: E402
 from app.models import ExtractedLabel  # noqa: E402
-from app.queue import load_queue  # noqa: E402
 from app.warning import FULL_TEXT  # noqa: E402
 
 
@@ -34,7 +33,7 @@ def faithful_reading(entry) -> ExtractedLabel:
 
 def simulated_calls():
     calls = []
-    for entry in load_queue().values():
+    for entry in bm.scored_entries():
         faithful = faithful_reading(entry)
         fixer = faithful.model_copy(update={"government_warning": FULL_TEXT if faithful.government_warning else None})
         calls.append(bm.Call("faithful", entry, 0, 2.0, faithful, None, {}))
@@ -51,7 +50,7 @@ def by_key(calls):
 
 def test_perfect_reader_gets_every_expected_result():
     st = bm.model_stats([c for c in simulated_calls() if c.model == "faithful"])
-    assert st["correct"] == st["n"] == len(load_queue())
+    assert st["correct"] == st["n"] == len(bm.scored_entries())
     assert st["false_pass"] == 0 and st["silent_corrections"] == 0
 
 

@@ -108,8 +108,15 @@ function QueueTable({ items, reviews }: { items: QueueItem[]; reviews: Reviews }
                   {item.id}
                 </Link>
               </TableCell>
-              <TableCell className={cn(CELL, "font-bold max-md:order-1 max-md:basis-full max-md:text-xl")}>
-                {item.brand_name}
+              <TableCell className={cn(CELL, "max-md:order-1 max-md:basis-full")}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="font-bold max-md:text-xl">{item.brand_name}</span>
+                  {item.registry_url && (
+                    <Badge variant="outline" className="font-normal">
+                      Real application
+                    </Badge>
+                  )}
+                </div>
               </TableCell>
               <TableCell className={cn(CELL, "max-md:order-2 max-md:basis-full")}>{item.applicant}</TableCell>
               <TableCell className={cn(CELL, "max-md:order-3 max-md:basis-full max-md:pt-1")}>

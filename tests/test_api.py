@@ -111,6 +111,14 @@ def test_queue_detail_has_the_application():
     assert detail.product_type == FIRST.product_type
 
 
+def test_only_real_applications_link_to_the_registry():
+    by_id = {i["id"]: i for i in client.get("/api/queue").json()}
+    real = next(e for e in load_queue().values() if e.registry_url)
+    assert by_id[real.id]["registry_url"] == real.registry_url
+    assert client.get(f"/api/queue/{real.id}").json()["registry_url"] == real.registry_url
+    assert by_id[FIRST.id]["registry_url"] is None
+
+
 def test_unknown_queue_id_is_404():
     assert client.get("/api/queue/COLA-00-0000").status_code == 404
     res = client.post("/api/queue/COLA-00-0000/check")
@@ -124,6 +132,14 @@ def test_check_queued_application(fake_readers):
     assert res.status_code == 200, res.text
     body = CheckResult.model_validate(res.json())
     assert body.overall == "pass" and body.image_assessable
+
+
+def test_every_panel_of_a_queued_application_goes_to_each_reader(fake_readers):
+    entry = next(e for e in load_queue().values() if len(e.images) > 1)
+    fake_readers["primary-model"] = GOOD
+    fake_readers["secondary-model"] = GOOD
+    assert client.post(f"/api/queue/{entry.id}/check").status_code == 200
+    assert fake_readers["images_sent"] == {"primary-model": len(entry.images), "secondary-model": len(entry.images)}
 
 
 def test_upload_sends_every_image_and_caps_the_count(fake_readers):

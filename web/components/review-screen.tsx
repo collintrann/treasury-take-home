@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -160,6 +160,18 @@ function ApplicationHeader({ application }: { application: QueuedApplication }) 
           <dd className="font-bold tabular-nums">{formatDate(application.submitted_at)}</dd>
         </div>
       </dl>
+      {application.registry_url && (
+        <a
+          href={application.registry_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-fit items-center gap-1.5 rounded-sm text-primary underline underline-offset-4 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+        >
+          View this application in TTB&apos;s Public COLA Registry
+          <ExternalLink className="size-4" aria-hidden />
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
+      )}
     </header>
   );
 }

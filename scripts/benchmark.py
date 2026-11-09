@@ -13,6 +13,8 @@ What it measures, per model and per primary+secondary pairing:
   * approximate cost per label
 
 Applications and expected results come from samples/queue/applications.json.
+Real applications have no expected result, so they are skipped here; see
+scripts/eval_ttb.py for those.
 What was printed on each label (for the warning and bold scores) comes from
 scripts/generate_samples.py, which made the images. Results are written to
 docs/benchmark-results.md.
@@ -88,6 +90,11 @@ def printed_warning(p: Printed) -> str | None:
 
 def overall_for(entry: QueueEntry, readings: list[Reading]) -> str:
     return decide(entry.product_type, entry.application, readings).overall
+
+
+def scored_entries() -> list[QueueEntry]:
+    """The generated queue entries, which are the ones with a known right answer."""
+    return [e for e in load_queue().values() if e.expected_overall is not None]
 
 
 async def timed_call(model: str, entry: QueueEntry, run: int, jpegs: list[bytes]) -> Call:
@@ -214,7 +221,7 @@ async def main() -> None:
 
     config.EFFORT = args.effort
     models = [m.strip() for m in args.models.split(",") if m.strip()]
-    entries = list(load_queue().values())
+    entries = scored_entries()
     jpegs = {e.id: [to_upload_jpeg(load_image((QUEUE_DIR / name).read_bytes())) for name in e.images] for e in entries}
 
     calls: list[Call] = []

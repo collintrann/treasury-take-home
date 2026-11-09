@@ -1,4 +1,4 @@
-"""The simulated review queue: generated applications in samples/queue/applications.json."""
+"""The review queue: generated and real applications in samples/queue/applications.json."""
 
 from __future__ import annotations
 
@@ -35,6 +35,7 @@ def as_item(entry: QueueEntry) -> QueueItem:
         product_type=entry.product_type,
         brand_name=entry.application.brand_name,
         images=image_urls(entry),
+        registry_url=entry.registry_url,
     )
 
 
@@ -45,5 +46,6 @@ def as_detail(entry: QueueEntry) -> QueueDetail:
         applicant=entry.applicant,
         product_type=entry.product_type,
         images=image_urls(entry),
+        registry_url=entry.registry_url,
         application=entry.application,
     )

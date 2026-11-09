@@ -1,7 +1,14 @@
-"""Render the simulated review queue into samples/queue/: one label image per application plus applications.json.
+"""Build the review queue in samples/queue/: label images plus applications.json.
 
-Each case knows exactly what it printed, so it also records the correct
-overall result (``expected_overall``) for the tests and the benchmark.
+The queue mixes two kinds of application.
+
+* Generated: one drawn label per case. Each case knows exactly what it
+  printed, so it also records the correct overall result
+  (``expected_overall``) for the tests and the benchmark.
+* Real: a random draw of approved applications from the TTB test set in
+  samples/ttb/ (see scripts/build_ttb_testset.py), with all their label
+  images. Their right answer isn't known in advance, so ``expected_overall``
+  is None.
 
     python scripts/generate_samples.py
 """
@@ -10,7 +17,9 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import random
 import re
+import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,7 +29,7 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from app.models import Application, Overall, ProductType, QueueEntry  # noqa: E402
+from app.models import MAX_LABEL_IMAGES, Application, Overall, ProductType, QueueEntry  # noqa: E402
 from app.queue import MANIFEST, QUEUE_DIR  # noqa: E402
 from app.warning import BODY, HEADER  # noqa: E402
 
@@ -297,8 +306,59 @@ PHOTO_EFFECTS = {
 }
 
 
+# ------------------------------------------------------------ real applications
+
+TTB_DIR = ROOT / "samples" / "ttb"
+TTB_PRODUCT_TYPES: dict[str, ProductType] = {"distilled spirits": S, "wine": W, "malt beverage": B}
+REGISTRY_URL = "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid={}"
+REAL_SCENARIO = "Real application from TTB's Public COLA Registry"
+REAL_PER_TYPE = 6
+# Fixed so the draw is reproducible. The picks are random, not chosen by hand.
+REAL_SEED = 20261110
+
+
+def ttb_records() -> list[dict]:
+    return json.loads((TTB_DIR / "manifest.json").read_text(encoding="utf-8"))
+
+
+def real_entry(record: dict) -> QueueEntry:
+    """A queue entry for one registry record.
+
+    TTB's application record gives the brand, the applicant and whether the
+    product is imported, but not the class/type statement, alcohol content,
+    net contents or bottler, so those stay blank and are not evaluated.
+    """
+    month, day, year = (int(part) for part in record["approval_date"].split("/"))
+    imported = record["source_of_product"] == "Imported"
+    return QueueEntry(
+        id=record["ttb_id"],
+        submitted_at=dt.date(year, month, day),
+        applicant=record["applicant_name_address"].split(",")[0].strip(),
+        product_type=TTB_PRODUCT_TYPES[record["product_type"]],
+        images=[image["file"] for image in record["images"]][:MAX_LABEL_IMAGES],
+        registry_url=REGISTRY_URL.format(record["ttb_id"]),
+        application=Application(
+            brand_name=record["brand_name"],
+            country_of_origin=record["origin_code"].title() if imported else "",
+        ),
+        expected_overall=None,
+        scenario=REAL_SCENARIO,
+    )
+
+
+def real_picks() -> list[dict]:
+    """REAL_PER_TYPE random records per beverage type."""
+    rng = random.Random(REAL_SEED)
+    records = sorted(ttb_records(), key=lambda r: r["ttb_id"])
+    return [
+        pick
+        for kind in TTB_PRODUCT_TYPES
+        for pick in rng.sample([r for r in records if r["product_type"] == kind], REAL_PER_TYPE)
+    ]
+
+
 def queue_entries() -> list[QueueEntry]:
-    return [c.entry() for c in CASES]
+    return [c.entry() for c in CASES] + [real_entry(r) for r in real_picks()]
 
 
 def main() -> None:
@@ -306,6 +366,15 @@ def main() -> None:
     for case in CASES:
         render(case).save(QUEUE_DIR / f"{case.id}.png", optimize=True)
         print("wrote", case.id)
+    real = [real_entry(r) for r in real_picks()]
+    wanted = {name for entry in real for name in entry.images}
+    for stale in QUEUE_DIR.glob("*.jpg"):
+        if stale.name not in wanted:
+            stale.unlink()
+    for entry in real:
+        for name in entry.images:
+            shutil.copyfile(TTB_DIR / "images" / name, QUEUE_DIR / name)
+        print("copied", entry.id, f"({len(entry.images)} images)")
     manifest = [e.model_dump(mode="json") for e in queue_entries()]
     MANIFEST.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print("wrote", MANIFEST.relative_to(ROOT))

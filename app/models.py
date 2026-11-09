@@ -62,6 +62,7 @@ class QueueItem(BaseModel):
     product_type: ProductType
     brand_name: str
     images: list[str]  # URL paths, e.g. /samples/queue/COLA-26-0001.png, front panel first
+    registry_url: Optional[str] = None  # the record in TTB's Public COLA Registry, for real applications
 
 
 class QueueDetail(BaseModel):
@@ -70,6 +71,7 @@ class QueueDetail(BaseModel):
     applicant: str
     product_type: ProductType
     images: list[str]
+    registry_url: Optional[str] = None
     application: Application
 
 
@@ -81,8 +83,9 @@ class QueueEntry(BaseModel):
     applicant: str
     product_type: ProductType
     images: list[str] = Field(min_length=1, max_length=MAX_LABEL_IMAGES)  # file names inside samples/queue/
+    registry_url: Optional[str] = None
     application: Application
-    expected_overall: Overall
+    expected_overall: Optional[Overall]  # None for real applications, whose right answer isn't known
     scenario: str
 
 

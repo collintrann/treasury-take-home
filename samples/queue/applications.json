@@ -7,6 +7,7 @@
     "images": [
       "COLA-26-0001.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "OLD TOM DISTILLERY",
       "class_type": "Kentucky Straight Bourbon Whiskey",
@@ -26,6 +27,7 @@
     "images": [
       "COLA-26-0002.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "MARROW CREEK",
       "class_type": "Cabernet Sauvignon",
@@ -45,6 +47,7 @@
     "images": [
       "COLA-26-0003.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "SWITCHBACK HOLLOW",
       "class_type": "India Pale Ale",
@@ -64,6 +67,7 @@
     "images": [
       "COLA-26-0004.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "Stone's Throw",
       "class_type": "Small Batch Gin",
@@ -83,6 +87,7 @@
     "images": [
       "COLA-26-0005.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "COPPER HOLLOW",
       "class_type": "Blended Whiskey",
@@ -102,6 +107,7 @@
     "images": [
       "COLA-26-0006.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "LARKSPUR BEND",
       "class_type": "Dry Riesling",
@@ -121,6 +127,7 @@
     "images": [
       "COLA-26-0007.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "FERROUS OX",
       "class_type": "Lager",
@@ -140,6 +147,7 @@
     "images": [
       "COLA-26-0008.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "GLEN ARDACH",
       "class_type": "Single Malt Scotch Whisky",
@@ -159,6 +167,7 @@
     "images": [
       "COLA-26-0009.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "CALLOWAY FLATS",
       "class_type": "Merlot",
@@ -178,6 +187,7 @@
     "images": [
       "COLA-26-0010.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "RIVERBEND",
       "class_type": "Straight Rye Whiskey",
@@ -197,6 +207,7 @@
     "images": [
       "COLA-26-0011.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "TIDEWATER GULL",
       "class_type": "American Pale Ale",
@@ -216,6 +227,7 @@
     "images": [
       "COLA-26-0012.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "OCASO",
       "class_type": "Rioja",
@@ -235,6 +247,7 @@
     "images": [
       "COLA-26-0013.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "NORTHERN LIGHTS",
       "class_type": "Vodka",
@@ -254,6 +267,7 @@
     "images": [
       "COLA-26-0014.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "SALTMARSH ESTATE",
       "class_type": "Sauvignon Blanc",
@@ -273,6 +287,7 @@
     "images": [
       "COLA-26-0015.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "PRAIRIE KILN",
       "class_type": "Hefeweizen",
@@ -292,6 +307,7 @@
     "images": [
       "COLA-26-0016.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "Harbor Light",
       "class_type": "Spiced Rum",
@@ -311,6 +327,7 @@
     "images": [
       "COLA-26-0017.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "QUILLMONT",
       "class_type": "Chardonnay",
@@ -330,6 +347,7 @@
     "images": [
       "COLA-26-0018.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "LOUGH CARRA",
       "class_type": "Irish Stout",
@@ -349,6 +367,7 @@
     "images": [
       "COLA-26-0019.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "IRON GATE",
       "class_type": "Dark Rum",
@@ -368,6 +387,7 @@
     "images": [
       "COLA-26-0020.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "THISTLEDOWN",
       "class_type": "Pinot Gris",
@@ -387,6 +407,7 @@
     "images": [
       "COLA-26-0021.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "ASHGROVE",
       "class_type": "Straight Bourbon Whiskey",
@@ -406,6 +427,7 @@
     "images": [
       "COLA-26-0022.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "BRAMBLECASK",
       "class_type": "Porter",
@@ -425,6 +447,7 @@
     "images": [
       "COLA-26-0023.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "CINDERVALE",
       "class_type": "Pinot Noir",
@@ -444,6 +467,7 @@
     "images": [
       "COLA-26-0024.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "HIGH DESERT",
       "class_type": "Blanco Tequila",
@@ -463,6 +487,7 @@
     "images": [
       "COLA-26-0025.png"
     ],
+    "registry_url": null,
     "application": {
       "brand_name": "GRANITE FOLD",
       "class_type": "Amber Ale",
@@ -473,5 +498,378 @@
     },
     "expected_overall": "fail",
     "scenario": "Warning misspells 'Surgeon Generel'."
+  },
+  {
+    "id": "24340001000453",
+    "submitted_at": "2024-12-09",
+    "applicant": "JP Bourgeois",
+    "product_type": "distilled_spirits",
+    "images": [
+      "24340001000453_0.jpg",
+      "24340001000453_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=24340001000453",
+    "application": {
+      "brand_name": "LHERAUD",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": "France"
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "24268001000443",
+    "submitted_at": "2024-09-26",
+    "applicant": "Beehive Distilling",
+    "product_type": "distilled_spirits",
+    "images": [
+      "24268001000443_0.jpg",
+      "24268001000443_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=24268001000443",
+    "application": {
+      "brand_name": "BULLY ROOK CO",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26208001000183",
+    "submitted_at": "2026-07-31",
+    "applicant": "Ubiquitie",
+    "product_type": "distilled_spirits",
+    "images": [
+      "26208001000183_0.jpg",
+      "26208001000183_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26208001000183",
+    "application": {
+      "brand_name": "OMETOCHTLI",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26057001000048",
+    "submitted_at": "2026-02-27",
+    "applicant": "The Whiskey Lab",
+    "product_type": "distilled_spirits",
+    "images": [
+      "26057001000048_0.jpg",
+      "26057001000048_1.jpg",
+      "26057001000048_2.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26057001000048",
+    "application": {
+      "brand_name": "WHISPERING WATERS",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": "Scotland"
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "25055001000006",
+    "submitted_at": "2025-03-02",
+    "applicant": "3BR Distillery LLC",
+    "product_type": "distilled_spirits",
+    "images": [
+      "25055001000006_0.jpg",
+      "25055001000006_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=25055001000006",
+    "application": {
+      "brand_name": "JERZEY JUNGLE JUICE",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "24348001000017",
+    "submitted_at": "2024-12-25",
+    "applicant": "Elevation Distilling",
+    "product_type": "distilled_spirits",
+    "images": [
+      "24348001000017_0.jpg",
+      "24348001000017_1.jpg",
+      "24348001000017_2.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=24348001000017",
+    "application": {
+      "brand_name": "SALT CITY STRAIGHT BOURBON WHISKEY",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "24351001000033",
+    "submitted_at": "2024-12-22",
+    "applicant": "ADVANTAGE INTERNATIONAL DISTRIBUTORS",
+    "product_type": "wine",
+    "images": [
+      "24351001000033_0.jpg",
+      "24351001000033_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=24351001000033",
+    "application": {
+      "brand_name": "PECIOLA",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": "Spain"
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26223001000252",
+    "submitted_at": "2026-08-12",
+    "applicant": "SOUTHERN CHAMPION",
+    "product_type": "wine",
+    "images": [
+      "26223001000252_0.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26223001000252",
+    "application": {
+      "brand_name": "BUZZBALLZ",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "25225001000175",
+    "submitted_at": "2025-08-13",
+    "applicant": "V.O.S. SELECTIONS INC.",
+    "product_type": "wine",
+    "images": [
+      "25225001000175_0.jpg",
+      "25225001000175_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=25225001000175",
+    "application": {
+      "brand_name": "JEAN PAUL PICARD",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": "France"
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "25070001000934",
+    "submitted_at": "2025-03-23",
+    "applicant": "Grapestake Cellars",
+    "product_type": "wine",
+    "images": [
+      "25070001000934_0.jpg",
+      "25070001000934_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=25070001000934",
+    "application": {
+      "brand_name": "GRAPESTAKE CELLARS",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26229001000447",
+    "submitted_at": "2026-08-18",
+    "applicant": "corkhoarder",
+    "product_type": "wine",
+    "images": [
+      "26229001000447_0.jpg",
+      "26229001000447_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26229001000447",
+    "application": {
+      "brand_name": "LA FERME DE LA SANSONNIERE",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": "France"
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26216001000235",
+    "submitted_at": "2026-08-06",
+    "applicant": "Soin du Vin",
+    "product_type": "wine",
+    "images": [
+      "26216001000235_0.jpg",
+      "26216001000235_1.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26216001000235",
+    "application": {
+      "brand_name": "CHATEAU CANON",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": "France"
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26209001000383",
+    "submitted_at": "2026-07-28",
+    "applicant": "Aslin Beer Company",
+    "product_type": "malt_beverage",
+    "images": [
+      "26209001000383_0.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26209001000383",
+    "application": {
+      "brand_name": "ASLIN BEER CO",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "25353001000530",
+    "submitted_at": "2025-12-31",
+    "applicant": "Great Notion Brewing & Barrel House",
+    "product_type": "malt_beverage",
+    "images": [
+      "25353001000530_0.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=25353001000530",
+    "application": {
+      "brand_name": "GREAT NOTION",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26300001000608",
+    "submitted_at": "2026-10-28",
+    "applicant": "Pondaseta Brewing Co.",
+    "product_type": "malt_beverage",
+    "images": [
+      "26300001000608_0.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26300001000608",
+    "application": {
+      "brand_name": "PONDASETA BREWING CO",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "24219001000172",
+    "submitted_at": "2024-08-08",
+    "applicant": "Belleflower Brewing Company",
+    "product_type": "malt_beverage",
+    "images": [
+      "24219001000172_0.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=24219001000172",
+    "application": {
+      "brand_name": "BELLEFLOWER BREWING CO.",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "25247001000267",
+    "submitted_at": "2025-09-08",
+    "applicant": "SOUL & SPIRITS",
+    "product_type": "malt_beverage",
+    "images": [
+      "25247001000267_0.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=25247001000267",
+    "application": {
+      "brand_name": "SOUL & SPIRITS",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
+  },
+  {
+    "id": "26062001000340",
+    "submitted_at": "2026-03-03",
+    "applicant": "FORT GEORGE BREWERY AND PUBLIC HOUSE",
+    "product_type": "malt_beverage",
+    "images": [
+      "26062001000340_0.jpg"
+    ],
+    "registry_url": "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicDisplaySearchBasic&ttbid=26062001000340",
+    "application": {
+      "brand_name": "FORT GEORGE",
+      "class_type": "",
+      "alcohol_content": "",
+      "net_contents": "",
+      "producer_name_address": "",
+      "country_of_origin": ""
+    },
+    "expected_overall": null,
+    "scenario": "Real application from TTB's Public COLA Registry"
   }
 ]

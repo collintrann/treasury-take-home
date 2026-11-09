@@ -31,3 +31,12 @@ def test_queue_mix():
     outcomes = Counter(e.expected_overall for e in generated)
     assert 0.5 <= outcomes["pass"] / len(generated) <= 0.6
     assert outcomes["fail"] and outcomes["needs_review"]
+    assert not any(e.registry_url for e in generated)
+
+
+def test_real_applications_link_to_the_registry():
+    real = [e for e in load_queue().values() if e.expected_overall is None]
+    assert Counter(e.product_type for e in real) == {"distilled_spirits": 6, "wine": 6, "malt_beverage": 6}
+    for entry in real:
+        assert entry.registry_url and entry.registry_url.endswith(f"ttbid={entry.id}")
+        assert entry.application.brand_name and not entry.application.class_type

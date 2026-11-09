@@ -11,6 +11,8 @@ export interface QueueItem {
   brand_name: string;
   // Same-origin paths such as /samples/queue/COLA-26-0001.png, front panel first.
   images: string[];
+  // The record in TTB's Public COLA Registry. Present only for real applications.
+  registry_url: string | null;
 }
 
 export interface QueuedApplication extends Omit<QueueItem, "brand_name"> {
