@@ -93,7 +93,7 @@ LABELS = [
     ),
     Label(
         "06_warning_not_bold.png",
-        "Warning lead-in not bold - should fail (Claude) / review (OCR can't see bold)",
+        "Warning lead-in not in bold - should fail",
         "HIGH DESERT", "Blanco Tequila", "40% Alc./Vol.", "750 mL",
         "Imported by High Desert Imports, Phoenix, AZ", country="Product of Mexico",
         header_bold=False,
@@ -126,7 +126,7 @@ LABELS = [
     # "corrects" what it sees, which would turn a violation into a false PASS.
     Label(
         "10_typo_surgeon_generel.png",
-        "Warning misspells 'Surgeon Generel' - should fail; tests whether a reader silently fixes typos",
+        "Warning misspells 'Surgeon Generel' - should fail",
         "BLUE HERON", "Dry Gin", "42% Alc./Vol.", "750 mL",
         "Blue Heron Distillers, Seattle, WA",
         warning_body=BODY.replace("Surgeon General", "Surgeon Generel"),

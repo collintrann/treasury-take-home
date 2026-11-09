@@ -154,5 +154,5 @@ def extract_with_ocr(img: Image.Image, app: ApplicationData) -> tuple[ExtractedL
     text, confidence = run_ocr(img)
     label = parse_ocr_text(text, app)
     if confidence < LOW_CONFIDENCE:
-        label.image_issues = "Photo is hard to read (low OCR confidence) - a clearer image may be needed."
+        label.image_issues = "This photo is hard to read. A clearer photo may be needed."
     return label, confidence

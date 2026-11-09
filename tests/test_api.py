@@ -7,6 +7,7 @@ reader is mocked, so the suite needs no API key and no network.
 import asyncio
 import csv
 import io
+import re
 from pathlib import Path
 
 import pytest
@@ -132,7 +133,6 @@ def test_silent_correction_is_caught_by_disagreement(fake_claude):
     warning = next(f for f in body["fields"] if f["field"] == "government_warning")
     assert warning["status"] == "review"
     assert warning["agreement"] == "disputed"
-    assert [r["status"] for r in warning["readings"]] == ["fail", "pass"]
     assert {"op": "missing", "text": "General,"} in warning["diff"]  # points the agent at the word
     assert body["overall"] == "review"
 
@@ -145,7 +145,6 @@ def test_slow_secondary_is_dropped_at_deadline(fake_claude, monkeypatch):
     body = res.json()
     assert body["readers"] == ["primary-model"]
     assert body["overall"] == "pass"  # the strong reader alone is trusted
-    assert "not double-checked" in body["extraction_note"]
     assert body["elapsed_ms"] < 2000  # we didn't wait for the slow one
 
 
@@ -163,7 +162,6 @@ def test_falls_back_to_ocr_when_all_readers_fail(fake_claude):
     fake_claude["secondary-model"] = ClaudeExtractionError("could not reach the AI service (network blocked?)")
     body = post_sample("04_wrong_abv.png").json()
     assert body["extraction_method"] == "ocr"
-    assert "network blocked" in body["extraction_note"]
     assert body["overall"] == "fail"
 
 
@@ -181,8 +179,8 @@ def test_claude_only_mode_surfaces_error(fake_claude, monkeypatch):
     fake_claude["primary-model"] = ClaudeExtractionError("AI reader timed out")
     fake_claude["secondary-model"] = ClaudeExtractionError("AI reader timed out")
     res = post_sample("01_old_tom_compliant.png")
-    assert res.status_code == 502
-    assert "timed out" in res.json()["detail"]
+    assert res.status_code == 503
+    assert "try again" in res.json()["detail"]
 
 
 # --------------------------------------------------------------- validation
@@ -242,3 +240,41 @@ def test_examples_and_static():
     assert client.get("/").status_code == 200
     assert client.get("/samples/01_old_tom_compliant.png").status_code == 200
     assert client.get("/api/health").json()["status"] == "ok"
+
+
+# Agents are nontechnical: nothing they see may mention how the app works.
+INTERNAL_WORDS = re.compile(r"\b(AI|model|models|OCR|Claude|Opus|Haiku|Sonnet|reader|readers|API|Tesseract)\b", re.I)
+
+
+def user_visible_text(body: dict) -> list[str]:
+    if "detail" in body:
+        return [body["detail"]]
+    return [body["extraction_note"]] + [f["note"] for f in body["fields"]]
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    ["agree", "dispute", "secondary_only", "all_fail_to_ocr", "claude_only_error"],
+)
+def test_user_facing_text_never_mentions_internals(fake_claude, monkeypatch, scenario):
+    typo = GOOD.model_copy(update={"government_warning": FULL_TEXT.replace("Surgeon General", "Surgeon Generel")})
+    down = ClaudeExtractionError("could not reach the AI service (network blocked?)")
+    fake_claude["primary-model"], fake_claude["secondary-model"] = {
+        "agree": (GOOD, GOOD),
+        "dispute": (typo, GOOD),
+        "secondary_only": (down, GOOD),
+        "all_fail_to_ocr": (down, down),
+        "claude_only_error": (down, down),
+    }[scenario]
+    if scenario == "claude_only_error":
+        monkeypatch.setattr(config, "EXTRACTION_MODE", "claude")
+    for text in user_visible_text(post_sample("01_old_tom_compliant.png").json()):
+        assert not INTERNAL_WORDS.search(text), text
+
+
+def test_ui_source_never_mentions_internals():
+    static = Path(__file__).parent.parent / "app" / "static"
+    visible = re.sub(r"<[^>]+>", " ", (static / "index.html").read_text())
+    strings = re.findall(r"`[^`]*`|\"[^\"]*\"", (static / "app.js").read_text())
+    for text in [visible, *strings]:
+        assert not re.search(r"\b(AI|OCR|Claude|Opus|Haiku|Sonnet|model)\b", text), text

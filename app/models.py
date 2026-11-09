@@ -94,7 +94,6 @@ class FieldResult(BaseModel):
     #   "disputed" - one reader passed it and the other didn't -> forced to REVIEW
     #   "single"   - only one reader answered; not double-checked
     agreement: Optional[str] = None
-    readings: Optional[list[dict]] = None  # each reader's view, shown when disputed
 
 
 class VerificationResult(BaseModel):

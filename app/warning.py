@@ -94,7 +94,7 @@ def check_warning(
     """
     if not found or not found.strip():
         if lenient:
-            return "review", "Offline OCR could not find the government warning - please check the label by eye.", None
+            return "review", "We couldn't find the government warning on the label. Please check by eye.", None
         return "missing", "No government warning was found on the label.", None
 
     problems: list[str] = []
@@ -118,7 +118,7 @@ def check_warning(
     if wording_differs and lenient and not problems and _only_near_misses(diff):
         return (
             "review",
-            "Wording looks right but a few words read slightly differently - likely an OCR misread. Please check the highlighted words.",
+            "The wording looks right, but a few words were hard to read. Please check the highlighted words.",
             diff,
         )
     if wording_differs:
@@ -132,7 +132,7 @@ def check_warning(
     if header_bold is None:
         return (
             "review",
-            "Wording and capitalization are correct. Bold type could not be confirmed automatically - please check by eye.",
+            "Wording and capitalization are correct. Please confirm that GOVERNMENT WARNING is in bold.",
             diff,
         )
     return "pass", "Exact match, capitalized, and bold.", diff

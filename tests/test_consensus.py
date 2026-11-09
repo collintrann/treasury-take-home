@@ -5,33 +5,28 @@ from app.extraction import Extraction, Reading
 from app.models import ApplicationData, ExtractedLabel, FieldResult, Status
 from app.warning import FULL_TEXT
 
-A, B = Reading("model-a", "primary", ExtractedLabel()), Reading("model-b", "secondary", ExtractedLabel())
-
-
 def fr(status: Status, found: str = "x") -> FieldResult:
     return FieldResult(field="brand_name", label="Brand name", expected="x", found=found, status=status, note=status.value)
 
 
 def test_same_verdict_is_agreed():
-    out = merge_field(fr(Status.PASS), fr(Status.PASS, found="X"), (A, B))
+    out = merge_field(fr(Status.PASS), fr(Status.PASS, found="X"))
     assert out.status == Status.PASS and out.agreement == "agreed"
 
 
-def test_pass_vs_fail_goes_to_review_with_both_readings():
-    out = merge_field(fr(Status.FAIL, "Riverbend"), fr(Status.PASS, "Old Tom"), (A, B))
+def test_pass_vs_fail_goes_to_review():
+    out = merge_field(fr(Status.FAIL, "Riverbend"), fr(Status.PASS, "Old Tom"))
     assert out.status == Status.REVIEW and out.agreement == "disputed"
-    assert [r["model"] for r in out.readings] == ["model-a", "model-b"]
-    assert [r["found"] for r in out.readings] == ["Riverbend", "Old Tom"]
 
 
 def test_pass_vs_review_is_also_disputed():
-    assert merge_field(fr(Status.PASS), fr(Status.REVIEW), (A, B)).agreement == "disputed"
+    assert merge_field(fr(Status.PASS), fr(Status.REVIEW)).agreement == "disputed"
 
 
 def test_neither_passes_keeps_the_more_severe():
-    out = merge_field(fr(Status.REVIEW), fr(Status.FAIL), (A, B))
+    out = merge_field(fr(Status.REVIEW), fr(Status.FAIL))
     assert out.status == Status.FAIL
-    out = merge_field(fr(Status.MISSING), fr(Status.REVIEW), (A, B))
+    out = merge_field(fr(Status.MISSING), fr(Status.REVIEW))
     assert out.status == Status.MISSING
 
 

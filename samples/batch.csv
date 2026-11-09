@@ -4,10 +4,10 @@ filename,brand_name,class_type,alcohol_content,net_contents,producer_name_addres
 03_title_case_warning.png,RIVERBEND,Straight Rye Whiskey,50% Alc./Vol. (100 Proof),750 mL,"Riverbend Distilling, Louisville, KY",,fail,'Government Warning' in title case (Jenny's example) - should fail
 04_wrong_abv.png,COPPER HOLLOW,Blended Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Copper Hollow Spirits, Austin, TX",,fail,Label says 40% but application says 45% - should fail
 05_altered_warning.png,NORTHERN LIGHTS,Vodka,40% Alc./Vol.,750 mL,"Northern Lights Distillery, Fargo, ND",,fail,Warning wording changed ('may cause health problems' -> 'can cause problems') - should fail
-06_warning_not_bold.png,HIGH DESERT,Blanco Tequila,40% Alc./Vol.,750 mL,"Imported by High Desert Imports, Phoenix, AZ",Mexico,fail,Warning lead-in not bold - should fail (Claude) / review (OCR can't see bold)
+06_warning_not_bold.png,HIGH DESERT,Blanco Tequila,40% Alc./Vol.,750 mL,"Imported by High Desert Imports, Phoenix, AZ",Mexico,fail,Warning lead-in not in bold - should fail
 07_angled_glare.png,OLD TOM DISTILLERY,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,pass,Compliant label photographed at an angle with glare - tests robustness
 08_no_warning.png,HARBOR LIGHT,Spiced Rum,35% Alc./Vol. (70 Proof),750 mL,"Harbor Light Rum Co., Charleston, SC",,fail,No government warning at all - should fail
 09_imported_scotch.png,GLEN ARDACH,Single Malt Scotch Whisky,43% Alc./Vol.,700 mL,"Imported by Ardach Imports LLC, New York, NY",Scotland,pass,Import with country of origin; net contents in cl vs mL in application - should pass
-10_typo_surgeon_generel.png,BLUE HERON,Dry Gin,42% Alc./Vol.,750 mL,"Blue Heron Distillers, Seattle, WA",,fail,Warning misspells 'Surgeon Generel' - should fail; tests whether a reader silently fixes typos
+10_typo_surgeon_generel.png,BLUE HERON,Dry Gin,42% Alc./Vol.,750 mL,"Blue Heron Distillers, Seattle, WA",,fail,Warning misspells 'Surgeon Generel' - should fail
 11_typo_alcohol_beverages.png,SILVER CREEK,Straight Bourbon Whiskey,46% Alc./Vol. (92 Proof),750 mL,"Silver Creek Distilling Co., Frankfort, KY",,fail,Warning says 'alcohol beverages' instead of 'alcoholic beverages' - should fail
 12_missing_comma.png,IRON GATE,Dark Rum,40% Alc./Vol. (80 Proof),750 mL,"Iron Gate Rum Works, Miami, FL",,fail,Warning drops the comma after 'machinery' - should fail; the subtlest deviation

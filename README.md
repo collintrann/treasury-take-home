@@ -77,7 +77,7 @@ Every result is one of:
    *false PASS*, most likely caused by a model silently "fixing" a typo in the
    warning. One reader can't catch its own silent fix, but a second, *different*
    model rarely makes the same one. When they disagree, the field goes to
-   REVIEW with both readings shown. Cost isn't the driver: at about 2¢ a label,
+   REVIEW, shown to the agent as a plain "please check" with the word highlighted. Cost isn't the driver: at about 2¢ a label,
    150k labels a year is a few thousand dollars. ([D7](docs/DESIGN.md#d7-model-routing-two-independent-readers-double-keying), [D8](docs/DESIGN.md#d8-consensus-rules))
 3. **Hybrid AI + offline OCR.** This covers Marcus's firewall concern: if the API
    is blocked, Tesseract runs locally, and the UI says so. OCR results are graded

@@ -237,7 +237,7 @@ def verify(
     for r in results:
         if from_ocr and r.status == Status.MISSING:
             r.status = Status.REVIEW
-            r.note = f"Offline OCR couldn't find the {r.label.lower()} - please check the label by eye."
+            r.note = f"We couldn't find the {r.label.lower()} on the label. Please check by eye."
         elif low_confidence and r.status == Status.FAIL:
             r.status = Status.REVIEW
             r.note = f"Possible mismatch, but the photo is hard to read: {r.note}"

@@ -84,27 +84,14 @@ async def extract(data: bytes, app: ApplicationData) -> Extraction:
             for f in failures:
                 log.warning("AI reader failed: %s", f)
             if readings:
-                notes = [readings[0].label.image_issues] if readings[0].label.image_issues else []
-                if failures and len(config.reader_models()) > 1:
-                    notes.insert(
-                        0,
-                        f"Only {readings[0].model} answered ({'; '.join(failures)}), "
-                        "so this result was not double-checked.",
-                    )
-                return Extraction("claude", readings, " ".join(notes))
+                return Extraction("claude", readings, readings[0].label.image_issues or "")
             if mode == "claude":
                 raise ClaudeExtractionError("; ".join(failures))
-            note = f"The AI readers were unavailable ({'; '.join(failures)}), so offline OCR was used instead."
+            log.warning("All AI readers failed; using offline OCR")
         elif mode == "claude":
             raise ClaudeExtractionError("EXTRACTION_MODE=claude but no ANTHROPIC_API_KEY is set")
-        else:
-            note = "Offline OCR mode (no AI key configured)."
-    else:
-        note = "Offline OCR mode."
 
     # Tesseract is a blocking subprocess call; run it off the event loop.
     async with _ocr_slots:
         label, confidence = await asyncio.to_thread(extract_with_ocr, img, app)
-    if label.image_issues:
-        note = f"{note} {label.image_issues}"
-    return Extraction("ocr", [Reading("ocr", "ocr", label)], note, low_confidence=confidence < LOW_CONFIDENCE)
+    return Extraction("ocr", [Reading("ocr", "ocr", label)], label.image_issues or "", low_confidence=confidence < LOW_CONFIDENCE)

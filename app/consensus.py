@@ -18,7 +18,7 @@ and the alternatives considered.
 
 from __future__ import annotations
 
-from .extraction import Extraction, Reading
+from .extraction import Extraction
 from .matching import overall_status, verify
 from .models import ApplicationData, FieldResult, Status
 
@@ -26,14 +26,8 @@ from .models import ApplicationData, FieldResult, Status
 _SEVERITY = {Status.SKIPPED: 0, Status.PASS: 1, Status.REVIEW: 2, Status.FAIL: 3, Status.MISSING: 3}
 
 
-def _reading_view(reading: Reading, result: FieldResult) -> dict:
-    return {"model": reading.model, "found": result.found, "status": result.status.value, "note": result.note}
-
-
-def merge_field(primary: FieldResult, secondary: FieldResult, readings: tuple[Reading, Reading]) -> FieldResult:
+def merge_field(primary: FieldResult, secondary: FieldResult) -> FieldResult:
     """Combine one field's results from the two readers."""
-    views = [_reading_view(readings[0], primary), _reading_view(readings[1], secondary)]
-
     if primary.status == secondary.status:
         return primary.model_copy(update={"agreement": "agreed"})
 
@@ -46,16 +40,15 @@ def merge_field(primary: FieldResult, secondary: FieldResult, readings: tuple[Re
             update={
                 "status": Status.REVIEW,
                 "agreement": "disputed",
-                "readings": views,
                 "diff": objector.diff,
-                "note": "The two AI readers disagree on this item - please check the label by eye.",
+                "note": "We couldn't confirm this item. Please check the label.",
             }
         )
 
     # Neither passed (e.g. REVIEW vs FAIL): both already route it to a human,
     # so keep the more severe finding rather than water it down.
     worse = primary if _SEVERITY[primary.status] >= _SEVERITY[secondary.status] else secondary
-    return worse.model_copy(update={"agreement": "agreed", "readings": views})
+    return worse.model_copy(update={"agreement": "agreed"})
 
 
 def verify_extraction(app: ApplicationData, extraction: Extraction) -> tuple[Status, list[FieldResult]]:
@@ -66,8 +59,7 @@ def verify_extraction(app: ApplicationData, extraction: Extraction) -> tuple[Sta
     per_reader = [verify(app, r.label)[1] for r in extraction.readings]
 
     if len(per_reader) >= 2:
-        pair = (extraction.readings[0], extraction.readings[1])
-        fields = [merge_field(a, b, pair) for a, b in zip(per_reader[0], per_reader[1])]
+        fields = [merge_field(a, b) for a, b in zip(per_reader[0], per_reader[1])]
         return overall_status(fields), fields
 
     # Only one reader answered.
@@ -82,8 +74,8 @@ def verify_extraction(app: ApplicationData, extraction: Extraction) -> tuple[Sta
             f = f.model_copy(
                 update={
                     "status": Status.REVIEW,
-                    "note": "Wording looks correct, but only the fast reader answered, so the exact text "
-                    "wasn't double-checked. Please confirm by eye.",
+                    "note": "The wording looks correct, but we couldn't fully confirm it. "
+                    "Please check the exact text on the label.",
                 }
             )
         fields.append(f)

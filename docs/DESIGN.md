@@ -94,7 +94,7 @@ constrains the response to the Pydantic schema, and the SDK validates it.
 
 **Decision.** Hybrid. AI readers run first; if every one fails or misses the
 deadline, Tesseract runs locally. `EXTRACTION_MODE=ocr` forces offline mode, and
-`=claude` disables the fallback. The UI always states which reader was used and why.
+`=claude` disables the fallback. Which reader ran is logged on the server, not shown to agents (D18).
 
 **Trade-offs.**
 * ➕ The tool still works if the AI endpoint is blocked or down, which was the exact
@@ -201,8 +201,8 @@ two models aren't a disagreement, because both pass.
 | Primary | Secondary | Result | Why |
 |---|---|---|---|
 | X | X (same) | X, *agreed* | Independent confirmation |
-| PASS | anything else | **REVIEW**, *disputed*, both readings shown | One reader objects, so it can't be a clean pass |
-| anything else | PASS | **REVIEW**, *disputed*, both readings shown | The silent-correction case |
+| PASS | anything else | **REVIEW**, *disputed* | One reader objects, so it can't be a clean pass |
+| anything else | PASS | **REVIEW**, *disputed* | The silent-correction case |
 | REVIEW | FAIL (or the reverse) | the more severe one, FAIL | Both already flag it; don't water down a FAIL |
 
 **The safety property: a field can only PASS if every reader that answered passed it.**
@@ -219,11 +219,12 @@ produces **5 false PASSes** on its own. Paired with a faithful reader, it produc
 the design exists for, pinned as a regression test. Whether real models behave
 like the "fixer" is what the benchmark (D22) measures.
 
-**UI.** Disputed fields show each model's reading and verdict side by side, plus
-the word diff from the reader that objected, so the agent sees exactly where to
-look instead of comparing two paragraphs ("no hunting for buttons").
+**UI.** A disputed field says only "We couldn't confirm this item. Please check
+the label." It shows the word diff from the reader that objected, so the agent
+sees exactly where to look. Agents never see that two readers exist, which model
+ran, or why one failed (D18). That detail goes to the server log.
 
-![A disputed warning: one reader saw 'Generel', the other 'General'](disputed-field.png)
+![A disputed warning: the misspelled word is highlighted with a plain "please check" note](disputed-field.png)
 
 ### D9. Which models
 
@@ -271,7 +272,7 @@ pairing. Both models are environment variables (`PRIMARY_MODEL`, `SECONDARY_MODE
 | Situation | Behaviour | Reasoning |
 |---|---|---|
 | Both readers answer | Consensus (D8) | Normal path |
-| Only the **primary** answers | Its verdicts stand; the note says "not double-checked" | Same trust as the original single-reader design; the strongest model |
+| Only the **primary** answers | Its verdicts stand; the server logs that only one reader answered | Same trust as the original single-reader design; the strongest model |
 | Only the **secondary** answers | Its verdicts stand, **except a warning PASS becomes REVIEW** | Silent correction is the weaker model's characteristic failure, and the warning is where it matters |
 | Neither answers in time / errors | Offline OCR (D4, D5) | Something is better than nothing, and it's clearly labelled |
 | `SECONDARY_MODEL=""` | Single reader, no degradation note | An explicit configuration, not a failure |
@@ -377,6 +378,11 @@ Sarah: *"something my mother could figure out … no hunting for buttons."*
 * Plain-English notes on every field.
 * "Try an example" menu so nobody needs test files.
 * Dark mode, keyboard focus styles, and it works at phone width.
+* **No technical wording.** Nothing an agent sees mentions AI, models, OCR or
+  readers. Notes say what to do ("Please check the label"), and failures show a
+  fixed "We couldn't read this label right now. Please try again in a minute."
+  with the details in the server log. Two tests enforce this: one checks every
+  response path, and one scans the page's own text.
 
 ### D19. Stateless: nothing stored
 

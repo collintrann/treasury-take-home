@@ -75,7 +75,8 @@ async def verify_label(
     except InvalidImageError as exc:
         raise HTTPException(400, str(exc)) from exc
     except ClaudeExtractionError as exc:
-        raise HTTPException(502, f"Could not read the label: {exc}.") from exc
+        log.error("could not read %s: %s", image.filename, exc)
+        raise HTTPException(503, "We couldn't read this label right now. Please try again in a minute.") from exc
 
     overall, fields = verify_extraction(application, result)
     elapsed = int((time.perf_counter() - started) * 1000)
