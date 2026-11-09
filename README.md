@@ -28,6 +28,19 @@ docker build -t label-check .
 docker run -p 8000:8000 --env-file .env label-check
 ```
 
+## Front end
+
+`web/` is a Next.js version of the page, built to deploy on Vercel with `web/` as the root directory. It talks to the Python service through its own server routes, which add the shared secret, so the browser never calls the service directly. Photos are shrunk in the browser before upload to stay under Vercel's 4.5 MB request limit.
+
+```bash
+cd web
+npm install
+cp .env.example .env.local        # CHECKER_URL and CHECKER_SECRET
+npm run dev                       # http://localhost:3000, with the Python service running
+```
+
+The application fields are defined once, in `web/lib/fields.ts`.
+
 ## Using it
 
 - **Check one label.** Upload a photo, type what the application says, and click "Check label". Blank fields are skipped. The warning is always checked.
