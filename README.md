@@ -1,10 +1,10 @@
 # Label Check
 
-Label Check helps TTB agents check an alcohol label against its application and the Government Health Warning rules.
+Label Check helps TTB agents review alcohol label applications. It checks each label against the application and the Government Health Warning rules.
 
 **Live demo:** https://treasury-take-home-flame.vercel.app
 
-Pick a label from "Try an example" and click "Check label".
+The demo has sample applications in the "Try an example" menu. Pick one and click "Check label".
 
 ![Label Check flagging a misspelled government warning](docs/screenshot.png)
 
@@ -51,7 +51,7 @@ The backend tests cover the matching rules, the warning check and the API. They 
 
 ## How it works
 
-1. The agent uploads a label image and types in what the application says.
+1. Each application arrives with its label image and the information the company entered. Agents don't upload or type anything.
 2. Two Claude models, Opus 5.5 and Haiku 5.5, read the label at the same time. Each one copies the label's text into the same set of fields. Neither decides whether anything passes.
 3. Python rules compare each reading with the application and give each field a result.
 4. The service compares the two sets of results. A field passes only when both readings pass it. When they disagree, the field goes to the agent for review.
