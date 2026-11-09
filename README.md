@@ -1,16 +1,18 @@
 # Label Check
 
-Label Check helps TTB agents review alcohol label applications. It checks each label against the application and the Government Health Warning rules.
+AI-Assisted review for alcohol label applications. Checks each label against the application and the Government Health Warning rules.
 
 **Live demo:** https://treasury-take-home-flame.vercel.app
 
-The demo opens on a review queue of 43 applications. 18 are real approved applications from TTB's Public COLA Registry, and 25 are generated. Open one and the label check runs. Agents don't upload or type anything.
+The web page runs on Vercel and the checking service runs on DigitalOcean.
+
+The demo opens on a review queue of 43 applications. 18 are real approved applications from TTB's Public COLA Registry, and 25 are generated. Checks run when an application is opened. Agents don't upload or type anything.
 
 ![An application in the review queue with a misspelled government warning flagged](docs/screenshot.png)
 
 ## Setup
 
-You need Python 3.11 or newer, Node.js 20 or newer, and an Anthropic API key.
+Requirements: Python 3.11+, Node.js 20+, Anthropic API key.
 
 ### Backend
 
@@ -50,6 +52,14 @@ cd web && npm run lint && npm run build
 The backend tests cover every checking rule, the two-reading merge, the queue and the API errors. They use stand-ins for the models, so they need no API key or network.
 
 `scripts/eval_ttb.py` measures accuracy on real applications with the real models. It needs the API key and costs about 6 dollars for a full run. See [Accuracy on real applications](#accuracy-on-real-applications).
+
+## Deployment
+
+The app is two services, and both deploy automatically when `main` changes.
+
+The web page runs on Vercel, with `web/` as the project's root directory. It needs two environment variables. `CHECKER_URL` is the checking service's address, and `CHECKER_SECRET` is a shared secret.
+
+The checking service runs on DigitalOcean App Platform, built from the `Dockerfile` in the repository root. It needs `ANTHROPIC_API_KEY` and the same `CHECKER_SECRET`. The service refuses any API call without that secret, so only the Vercel server can use it. When it starts, it reads one sample label to prepare the models, so the first agent's check isn't slow.
 
 ## How it works
 
