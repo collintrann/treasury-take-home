@@ -302,7 +302,7 @@
   {
     "id": "COLA-26-0016",
     "submitted_at": "2026-10-26",
-    "applicant": "Harbor Light Rum Co.",
+    "applicant": "Salt Harbor Rum Co.",
     "product_type": "distilled_spirits",
     "images": [
       "COLA-26-0016.png"
@@ -313,11 +313,11 @@
       "class_type": "Spiced Rum",
       "alcohol_content": "35% Alc./Vol. (70 Proof)",
       "net_contents": "750 mL",
-      "producer_name_address": "Harbor Light Rum Co., Charleston, SC",
+      "producer_name_address": "Salt Harbor Rum Co., Charleston, SC",
       "country_of_origin": ""
     },
     "expected_overall": "fail",
-    "scenario": "Brand on the label differs from the application."
+    "scenario": "Brand on the label differs from the application, and the application's brand appears nowhere on the label."
   },
   {
     "id": "COLA-26-0017",

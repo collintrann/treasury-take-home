@@ -110,6 +110,11 @@ class ExtractedLabel(BaseModel):
     country_of_origin: Optional[str] = Field(
         None, description="Country of origin statement if present, e.g. 'Product of Scotland'."
     )
+    other_names: Optional[list[str]] = Field(
+        None,
+        description="Every other prominent name on the label besides brand_name, exactly as printed: product or "
+        "fanciful names, and brewery, winery, distillery or company names. Labels often lead with one of these.",
+    )
     government_warning: Optional[str] = Field(
         None,
         description=(

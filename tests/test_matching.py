@@ -228,3 +228,45 @@ def test_import_country_is_compared():
     assert findings("distilled_spirits", app=app, label=label)["country_of_origin"].status == "pass"
     label = FULL_LABEL.model_copy(update={"country_of_origin": "Product of Ireland"})
     assert findings("distilled_spirits", app=app, label=label)["country_of_origin"].status == "fail"
+
+
+# ------------------------------------------- cases found on real approved labels
+
+def test_accents_are_a_benign_difference():
+    # TTB's records are plain capitals; labels print the accents.
+    assert status(compare_text("brand_name", "MARTI", "Martí")) == "pass"
+    assert status(compare_text("brand_name", "CUVAR", "ČUVAR")) == "pass"
+
+
+def test_same_words_in_another_order_need_review():
+    assert status(compare_text("brand_name", "JEAN PAUL PICARD", "PICARD Jean-Paul")) == "needs_review"
+
+
+def test_run_together_words_are_compared_without_spaces():
+    assert status(compare_text("brand_name", "EVIL TWIN BREWING NEW YORK CITY", "EVILTWIN BREWING")) == "needs_review"
+
+
+def test_brand_printed_elsewhere_on_the_label_needs_review_not_fail():
+    # Real labels often lead with a product name and print the brand smaller,
+    # or use the bottler's name as the brand.
+    app = Application(brand_name="BULLY ROOK CO")
+    label = ExtractedLabel(brand_name="SOMEL", other_names=["BullyRookCo.", "BEEHIVE DISTILLING"], image_readable=True)
+    brand = findings("distilled_spirits", app=app, label=label)["brand_name"]
+    assert brand.status == "needs_review" and "BullyRookCo." in brand.explanation
+
+    app = Application(brand_name="NEWPORT VINEYARDS")
+    label = ExtractedLabel(
+        brand_name="RHODY COYOTE",
+        producer_name_address="PRODUCED & BOTTLED BY NEWPORT VINEYARDS, MIDDLETOWN, RI",
+        image_readable=True,
+    )
+    assert findings("wine", app=app, label=label)["brand_name"].status == "needs_review"
+
+
+def test_brand_found_nowhere_on_the_label_still_fails():
+    app = Application(brand_name="HARBOR LIGHT")
+    label = ExtractedLabel(
+        brand_name="SALT HARBOR", other_names=["Lighthouse Reserve"],
+        producer_name_address="Bottled by Salt Harbor Rum Co., Charleston, SC", image_readable=True,
+    )
+    assert findings("distilled_spirits", app=app, label=label)["brand_name"].status == "fail"

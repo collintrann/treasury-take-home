@@ -39,7 +39,9 @@ WINE_ABV_OPTIONAL_UP_TO = 14.0
 
 
 def normalize(text: str) -> str:
-    """Lowercase, unify quotes/dashes, drop punctuation, collapse whitespace."""
+    """Lowercase, drop accents, unify quotes/dashes, drop punctuation, collapse whitespace."""
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
     text = unicodedata.normalize("NFKC", text)
     text = text.replace("’", "'").replace("‘", "'").replace("&", " and ")
     text = text.lower()
@@ -80,9 +82,13 @@ def compare_text(key: str, expected: str, found: str) -> tuple[Status, str]:
     ratio = similarity(expected, found)
     if ratio >= REVIEW_SIMILARITY:
         return "needs_review", f"Very close but not identical ({ratio:.0%} similar). Please check by eye."
-    if re.search(rf"\b{re.escape(n_found)}\b", n_exp):
+    if sorted(n_exp.split()) == sorted(n_found.split()):
+        return "needs_review", "The same words in a different order. Please check."
+    # Logos often run words together ("EVILTWIN"), so containment is also tried without spaces.
+    squashed_exp, squashed_found = n_exp.replace(" ", ""), n_found.replace(" ", "")
+    if re.search(rf"\b{re.escape(n_found)}\b", n_exp) or squashed_found in squashed_exp:
         return "needs_review", "The label shows only part of the application value. Please check."
-    if re.search(rf"\b{re.escape(n_exp)}\b", n_found):
+    if re.search(rf"\b{re.escape(n_exp)}\b", n_found) or squashed_exp in squashed_found:
         return "needs_review", "The label has extra words around the application value. Please check."
     return "fail", "Does not match the application."
 
@@ -207,6 +213,19 @@ def _not_evaluated_reason(key: str, product_type: ProductType, expected: str, fo
     return None
 
 
+def _brand_elsewhere(expected: str, label: ExtractedLabel) -> str | None:
+    """Other label text that shows the application's brand, if any.
+
+    Real labels often lead with a product or brewery name and print the brand
+    smaller, or use the bottler's name as the brand. When the brand is on the
+    label at all, a different main name isn't reliable evidence of a mismatch.
+    """
+    for text in [*(label.other_names or []), label.producer_name_address or ""]:
+        if text.strip() and compare_text("brand_name", expected, text)[0] != "fail":
+            return text.strip()
+    return None
+
+
 def _compare(key: str, expected: str, found: str) -> tuple[Status, str]:
     if key == "alcohol_content":
         return compare_alcohol(expected, found)
@@ -228,6 +247,13 @@ def application_findings(product_type: ProductType, app: Application, label: Ext
             status, explanation = "needs_review", "Not found on the label images. Please check the label."
         else:
             status, explanation = _compare(key, expected, found)
+            elsewhere = _brand_elsewhere(expected, label) if key == "brand_name" and status == "fail" else None
+            if elsewhere:
+                status = "needs_review"
+                explanation = (
+                    f'The label leads with a different name, but the brand also appears as "{elsewhere}". '
+                    "Please check which name is the brand."
+                )
         findings.append(
             Finding(
                 key=key,

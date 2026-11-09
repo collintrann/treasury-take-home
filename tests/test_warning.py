@@ -110,3 +110,20 @@ def test_missing_warning_needs_review_and_nothing_else_is_judged():
 def test_visual_problems_and_uncertainty_need_review_never_fail(attribute, key, problem):
     assert check(**{attribute: problem})[key].status == "needs_review"
     assert check(**{attribute: None})[key].status == "needs_review"
+
+
+@pytest.mark.parametrize(
+    "printed",
+    [
+        FULL_TEXT.replace("(1) According", "(1)According").replace("defects. (2)", "defects.(2)"),
+        FULL_TEXT.replace("operate machinery,", "operate machin-ery,"),
+    ],
+)
+def test_spacing_around_numbers_and_line_break_hyphens_are_layout(printed):
+    # Both seen on approved labels in TTB's registry.
+    assert check(government_warning=printed)["warning_wording"].status == "pass"
+
+
+def test_missing_comma_still_fails():
+    printed = FULL_TEXT.replace("Surgeon General, women", "Surgeon General women")
+    assert check(government_warning=printed)["warning_wording"].status == "fail"

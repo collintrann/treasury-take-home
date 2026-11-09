@@ -33,15 +33,26 @@ NO_WARNING = "No warning was found on the label images to check."
 
 
 def _tokens(text: str) -> list[str]:
-    """Words with typographic quotes unified. Line breaks are layout; punctuation stays on its word."""
+    """Words with typographic quotes unified. Punctuation stays on its word.
+
+    Layout isn't wording: line breaks, and the spacing around the (1) and (2)
+    markers, which labels often set tight ("(1)According", "defects.(2)").
+    """
     text = text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
-    return text.split()
+    return re.sub(r"\s*(\(\d\))\s*", r" \1 ", text).split()
+
+
+def _compare_key(word: str) -> str:
+    # The required text has no hyphens, so one inside a word is a line-break hyphen ("machin-ery").
+    return re.sub(r"(?<=\w)-(?=\w)", "", word.lower())
 
 
 def word_diff(expected: str, found: str) -> list[DiffOp]:
     """Word-level diff for display. Body words compare case-insensitively; only the lead-in must be capitals."""
     exp, got = _tokens(expected), _tokens(found)
-    matcher = difflib.SequenceMatcher(a=[w.lower() for w in exp], b=[w.lower() for w in got], autojunk=False)
+    matcher = difflib.SequenceMatcher(
+        a=[_compare_key(w) for w in exp], b=[_compare_key(w) for w in got], autojunk=False
+    )
     out: list[DiffOp] = []
     for op, a1, a2, b1, b2 in matcher.get_opcodes():
         if op == "equal":

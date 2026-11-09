@@ -30,9 +30,9 @@ IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 UNAVAILABLE = "We couldn't read this label right now. Please try again in a minute."
 
 # The API prepares each new response format the first time it sees it, which
-# took about a minute when measured. Reading one sample label at startup pays
-# that cost before an agent's first check would hit the deadline.
-WARM_UP_TIMEOUT_SECONDS = 180
+# took one to two and a half minutes when measured. Reading one sample label at
+# startup pays that cost before an agent's first check would hit the deadline.
+WARM_UP_TIMEOUT_SECONDS = 300
 
 
 async def _warm_up() -> None:
