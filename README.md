@@ -21,17 +21,17 @@ sudo apt-get install tesseract-ocr        # macOS: brew install tesseract
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 
-# 3. Optional: enable the AI reader. Without a key, the app runs in offline-OCR mode.
-export ANTHROPIC_API_KEY=sk-ant-...
+# 3. Settings: copy the template and fill in the keys. Without an Anthropic key, the app runs in offline-OCR mode.
+cp .env.example .env
 
 # 4. Run
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --env-file .env
 # open http://localhost:8000 and pick a label from the "Try an example" menu
 ```
 
 Run the tests with `pytest`. There are 65 tests, and they need no API key or network (the models are scripted fakes).
 
-Or with Docker: `docker build -t label-check . && docker run -p 8000:8000 -e ANTHROPIC_API_KEY=... label-check`
+Or with Docker: `docker build -t label-check . && docker run -p 8000:8000 --env-file .env label-check`
 
 ## Using it
 
@@ -63,7 +63,7 @@ The reasoning and trade-offs are in [docs/DESIGN.md](docs/DESIGN.md).
 ### Benchmark
 
 ```bash
-ANTHROPIC_API_KEY=... python scripts/benchmark.py --runs 3   # real, billed API calls
+python scripts/benchmark.py --runs 3   # real, billed API calls; reads .env
 ```
 
 This scores each model alone and each primary+secondary pairing on the 12 sample
