@@ -1,7 +1,6 @@
 """End-to-end tests through the HTTP API.
 
-The OCR tests run real Tesseract on the bundled sample labels. The Claude
-reader is mocked, so the suite needs no API key and no network.
+The models are scripted stand-ins, so the suite needs no API key and no network.
 """
 
 import asyncio
@@ -41,18 +40,12 @@ def config_fields():
 
 
 @pytest.fixture
-def ocr_only(monkeypatch):
-    monkeypatch.setattr(config, "EXTRACTION_MODE", "ocr")
-
-
-@pytest.fixture
 def fake_claude(monkeypatch):
     """Pretend a key is configured and script each model's answer.
 
     Set ``state[model]`` to an ExtractedLabel, an Exception to raise, or a
     ("sleep", seconds, label) tuple to simulate a slow model.
     """
-    monkeypatch.setattr(config, "EXTRACTION_MODE", "auto")
     monkeypatch.setattr(config, "claude_configured", lambda: True)
     monkeypatch.setattr(config, "PRIMARY_MODEL", "primary-model")
     monkeypatch.setattr(config, "SECONDARY_MODEL", "secondary-model")
@@ -83,40 +76,12 @@ GOOD = ExtractedLabel(
 )
 
 
-# ----------------------------------------------------------------- OCR, real
-
-@pytest.mark.parametrize(
-    "filename, expected",
-    [
-        ("01_old_tom_compliant.png", "review"),  # OCR can't confirm bold -> review
-        ("03_title_case_warning.png", "fail"),
-        ("04_wrong_abv.png", "fail"),
-        ("05_altered_warning.png", "fail"),
-        ("07_angled_glare.png", "review"),  # deskew makes this readable
-        ("09_imported_scotch.png", "review"),
-    ],
-)
-def test_ocr_on_samples(ocr_only, filename, expected):
-    res = post_sample(filename)
-    assert res.status_code == 200, res.text
-    body = res.json()
-    assert body["extraction_method"] == "ocr"
-    assert body["overall"] == expected
-
-
-def test_ocr_compliant_label_only_flags_boldness(ocr_only):
-    fields = post_sample("01_old_tom_compliant.png").json()["fields"]
-    not_passing = {f["field"] for f in fields if f["status"] not in ("pass", "skipped")}
-    assert not_passing == {"government_warning"}
-
-
 # ---------------------------------------------------------- Claude, mocked
 
 def test_both_readers_agree_passes(fake_claude):
     fake_claude["primary-model"] = GOOD
     fake_claude["secondary-model"] = GOOD
     body = post_sample("01_old_tom_compliant.png").json()
-    assert body["extraction_method"] == "claude"
     assert body["readers"] == ["primary-model", "secondary-model"]
     assert body["overall"] == "pass"
     assert {f["agreement"] for f in body["fields"]} == {"agreed"}
@@ -156,12 +121,17 @@ def test_secondary_alone_cannot_pass_the_warning(fake_claude):
     assert body["overall"] == "review"
 
 
-def test_falls_back_to_ocr_when_all_readers_fail(fake_claude):
-    fake_claude["primary-model"] = ClaudeExtractionError("could not reach the AI service (network blocked?)")
-    fake_claude["secondary-model"] = ClaudeExtractionError("could not reach the AI service (network blocked?)")
-    body = post_sample("04_wrong_abv.png").json()
-    assert body["extraction_method"] == "ocr"
-    assert body["overall"] == "fail"
+def test_unreadable_when_all_readers_fail(fake_claude):
+    fake_claude["primary-model"] = ClaudeExtractionError("could not reach the AI service")
+    fake_claude["secondary-model"] = ClaudeExtractionError("could not reach the AI service")
+    res = post_sample("04_wrong_abv.png")
+    assert res.status_code == 503
+    assert "try again" in res.json()["detail"]
+
+
+def test_unreadable_without_api_key(fake_claude, monkeypatch):
+    monkeypatch.setattr(config, "claude_configured", lambda: False)
+    assert post_sample("01_old_tom_compliant.png").status_code == 503
 
 
 def test_single_reader_mode(fake_claude, monkeypatch):
@@ -173,18 +143,9 @@ def test_single_reader_mode(fake_claude, monkeypatch):
     assert body["extraction_note"] == ""  # single reader by choice isn't a degradation
 
 
-def test_claude_only_mode_surfaces_error(fake_claude, monkeypatch):
-    monkeypatch.setattr(config, "EXTRACTION_MODE", "claude")
-    fake_claude["primary-model"] = ClaudeExtractionError("AI reader timed out")
-    fake_claude["secondary-model"] = ClaudeExtractionError("AI reader timed out")
-    res = post_sample("01_old_tom_compliant.png")
-    assert res.status_code == 503
-    assert "try again" in res.json()["detail"]
-
-
 # --------------------------------------------------------------- validation
 
-def test_rejects_non_image(ocr_only):
+def test_rejects_non_image(fake_claude):
     res = client.post(
         "/api/verify",
         files={"image": ("notes.txt", io.BytesIO(b"hello"), "text/plain")},
@@ -194,13 +155,13 @@ def test_rejects_non_image(ocr_only):
     assert "image" in res.json()["detail"].lower()
 
 
-def test_requires_some_application_data(ocr_only):
+def test_requires_some_application_data(fake_claude):
     with open(SAMPLES / "01_old_tom_compliant.png", "rb") as img:
         res = client.post("/api/verify", files={"image": ("a.png", img, "image/png")})
     assert res.status_code == 400
 
 
-def test_rejects_oversized_upload(ocr_only, monkeypatch):
+def test_rejects_oversized_upload(fake_claude, monkeypatch):
     monkeypatch.setattr(config, "MAX_UPLOAD_BYTES", 10)
     with open(SAMPLES / "01_old_tom_compliant.png", "rb") as img:
         res = client.post("/api/verify", files={"image": ("a.png", img, "image/png")}, data={"brand_name": "X"})
@@ -253,7 +214,7 @@ def user_visible_text(body: dict) -> list[str]:
 
 @pytest.mark.parametrize(
     "scenario",
-    ["agree", "dispute", "secondary_only", "all_fail_to_ocr", "claude_only_error"],
+    ["agree", "dispute", "secondary_only", "all_fail"],
 )
 def test_user_facing_text_never_mentions_internals(fake_claude, monkeypatch, scenario):
     typo = GOOD.model_copy(update={"government_warning": FULL_TEXT.replace("Surgeon General", "Surgeon Generel")})
@@ -262,11 +223,8 @@ def test_user_facing_text_never_mentions_internals(fake_claude, monkeypatch, sce
         "agree": (GOOD, GOOD),
         "dispute": (typo, GOOD),
         "secondary_only": (down, GOOD),
-        "all_fail_to_ocr": (down, down),
-        "claude_only_error": (down, down),
+        "all_fail": (down, down),
     }[scenario]
-    if scenario == "claude_only_error":
-        monkeypatch.setattr(config, "EXTRACTION_MODE", "claude")
     for text in user_visible_text(post_sample("01_old_tom_compliant.png").json()):
         assert not INTERNAL_WORDS.search(text), text
 

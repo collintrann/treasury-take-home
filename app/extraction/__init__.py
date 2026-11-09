@@ -1,49 +1,31 @@
-"""Pick a reader: two AI models in parallel first, local OCR as the fallback.
-
-Routing in one picture (details and trade-offs in docs/DESIGN.md):
-
-    image ─┬─► primary model   (most accurate) ─┐
-           │                                    ├─► consensus.py ─► verdict
-           └─► secondary model (fast, different)┘
-                    both run at once, hard deadline READ_DEADLINE_SECONDS
-                    nobody answered in time / errors ─► Tesseract OCR
-"""
+"""Read a label with two models in parallel under one deadline."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from dataclasses import dataclass, field
 
 from .. import config
-from ..models import ApplicationData, ExtractedLabel
+from ..models import ExtractedLabel
 from .claude_reader import ClaudeExtractionError, extract_with_claude
 from .image import InvalidImageError, load_image, to_upload_jpeg
-from .ocr_reader import LOW_CONFIDENCE, extract_with_ocr
 
 log = logging.getLogger(__name__)
 
-__all__ = ["extract", "Extraction", "Reading", "InvalidImageError"]
-
-# OCR is CPU-bound, so more parallel jobs than cores only adds contention.
-# (AI calls are network-bound and are limited separately in main.py.)
-_ocr_slots = asyncio.Semaphore(max(1, os.cpu_count() or 1))
-
+__all__ = ["extract", "Extraction", "Reading", "InvalidImageError", "ClaudeExtractionError"]
 
 @dataclass
 class Reading:
-    model: str  # model id, or "ocr"
-    role: str  # "primary" | "secondary" | "ocr"
+    model: str
+    role: str  # "primary" | "secondary"
     label: ExtractedLabel
 
 
 @dataclass
 class Extraction:
-    method: str  # "claude" | "ocr"
     readings: list[Reading] = field(default_factory=list)  # primary first
-    note: str = ""  # shown to the agent: fallback reason, image quality, ...
-    low_confidence: bool = False
+    note: str = ""  # shown to the agent, e.g. photo quality
 
 
 async def read_with_models(jpeg: bytes) -> tuple[list[Reading], list[str]]:
@@ -73,25 +55,14 @@ async def read_with_models(jpeg: bytes) -> tuple[list[Reading], list[str]]:
     return readings, failures
 
 
-async def extract(data: bytes, app: ApplicationData) -> Extraction:
-    """Read a label image. Raises InvalidImageError for bad uploads."""
-    img = load_image(data)
-    mode = config.EXTRACTION_MODE
-
-    if mode != "ocr":
-        if config.claude_configured():
-            readings, failures = await read_with_models(to_upload_jpeg(img))
-            for f in failures:
-                log.warning("AI reader failed: %s", f)
-            if readings:
-                return Extraction("claude", readings, readings[0].label.image_issues or "")
-            if mode == "claude":
-                raise ClaudeExtractionError("; ".join(failures))
-            log.warning("All AI readers failed; using offline OCR")
-        elif mode == "claude":
-            raise ClaudeExtractionError("EXTRACTION_MODE=claude but no ANTHROPIC_API_KEY is set")
-
-    # Tesseract is a blocking subprocess call; run it off the event loop.
-    async with _ocr_slots:
-        label, confidence = await asyncio.to_thread(extract_with_ocr, img, app)
-    return Extraction("ocr", [Reading("ocr", "ocr", label)], label.image_issues or "", low_confidence=confidence < LOW_CONFIDENCE)
+async def extract(data: bytes) -> Extraction:
+    """Read a label image. Raises InvalidImageError or ClaudeExtractionError."""
+    jpeg = to_upload_jpeg(load_image(data))
+    if not config.claude_configured():
+        raise ClaudeExtractionError("no ANTHROPIC_API_KEY is set")
+    readings, failures = await read_with_models(jpeg)
+    for f in failures:
+        log.warning("reader failed: %s", f)
+    if not readings:
+        raise ClaudeExtractionError("; ".join(failures))
+    return Extraction(readings, readings[0].label.image_issues or "")

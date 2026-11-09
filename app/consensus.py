@@ -51,10 +51,7 @@ def merge_field(primary: FieldResult, secondary: FieldResult) -> FieldResult:
 
 
 def verify_extraction(app: ApplicationData, extraction: Extraction) -> tuple[Status, list[FieldResult]]:
-    """Turn an Extraction (1 or 2 readings, AI or OCR) into the final verdict."""
-    if extraction.method == "ocr":
-        return verify(app, extraction.readings[0].label, from_ocr=True, low_confidence=extraction.low_confidence)
-
+    """Turn an Extraction (one or two readings) into the final verdict."""
     per_reader = [verify(app, r.label)[1] for r in extraction.readings]
 
     if len(per_reader) >= 2:

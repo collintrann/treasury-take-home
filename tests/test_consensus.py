@@ -38,7 +38,7 @@ def test_different_formatting_same_verdict_agrees():
     # "75 cl" and "750 mL" are different text but the same verdict.
     other = GOOD.model_copy(update={"net_contents": "75 cl"})
     overall, fields = verify_extraction(
-        APP, Extraction("claude", [Reading("a", "primary", GOOD), Reading("b", "secondary", other)])
+        APP, Extraction([Reading("a", "primary", GOOD), Reading("b", "secondary", other)])
     )
     assert overall == Status.PASS
     assert all(f.agreement == "agreed" for f in fields)
@@ -47,7 +47,7 @@ def test_different_formatting_same_verdict_agrees():
 def test_disagreement_on_bold_goes_to_review():
     other = GOOD.model_copy(update={"warning_header_bold": False})
     overall, fields = verify_extraction(
-        APP, Extraction("claude", [Reading("a", "primary", GOOD), Reading("b", "secondary", other)])
+        APP, Extraction([Reading("a", "primary", GOOD), Reading("b", "secondary", other)])
     )
     warning = next(f for f in fields if f.field == "government_warning")
     assert warning.status == Status.REVIEW and warning.agreement == "disputed"
@@ -55,12 +55,12 @@ def test_disagreement_on_bold_goes_to_review():
 
 
 def test_primary_alone_is_trusted():
-    overall, fields = verify_extraction(APP, Extraction("claude", [Reading("a", "primary", GOOD)]))
+    overall, fields = verify_extraction(APP, Extraction([Reading("a", "primary", GOOD)]))
     assert overall == Status.PASS and all(f.agreement == "single" for f in fields)
 
 
 def test_secondary_alone_cannot_pass_warning_but_other_fields_stand():
-    overall, fields = verify_extraction(APP, Extraction("claude", [Reading("b", "secondary", GOOD)]))
+    overall, fields = verify_extraction(APP, Extraction([Reading("b", "secondary", GOOD)]))
     by = {f.field: f for f in fields}
     assert by["government_warning"].status == Status.REVIEW
     assert by["brand_name"].status == Status.PASS

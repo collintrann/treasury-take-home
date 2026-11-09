@@ -60,41 +60,12 @@ def word_diff(expected: str, found: str) -> list[dict]:
     return out
 
 
-def _only_near_misses(diff: list[dict]) -> bool:
-    """True if every difference is a word swapped for a look-alike (e.g. 'alcahalic').
-
-    That pattern is typical of an OCR misread rather than a reworded warning.
-    """
-    changes = [d for d in diff if d["op"] != "equal"]
-    if not changes:
-        return True
-    # Pair each "missing" run with the "extra" run that replaced it.
-    i = 0
-    while i < len(changes):
-        if i + 1 >= len(changes) or (changes[i]["op"], changes[i + 1]["op"]) != ("missing", "extra"):
-            return False
-        a, b = changes[i]["text"].split(), changes[i + 1]["text"].split()
-        if len(a) != len(b):
-            return False
-        for wa, wb in zip(a, b):
-            if difflib.SequenceMatcher(a=wa.lower(), b=wb.lower()).ratio() < 0.7:
-                return False
-        i += 2
-    return True
-
-
-def check_warning(
-    found: str | None, header_bold: bool | None, lenient: bool = False
-) -> tuple[str, str, list[dict] | None]:
+def check_warning(found: str | None, header_bold: bool | None) -> tuple[str, str, list[dict] | None]:
     """Return (status, note, diff) for the warning statement.
 
     status is one of "pass" / "review" / "fail" / "missing".
-    ``lenient`` is used for OCR output, where a one-letter difference is more
-    likely a misread than a violation, so it goes to human review instead.
     """
     if not found or not found.strip():
-        if lenient:
-            return "review", "We couldn't find the government warning on the label. Please check by eye.", None
         return "missing", "No government warning was found on the label.", None
 
     problems: list[str] = []
@@ -115,12 +86,6 @@ def check_warning(
 
     diff = word_diff(BODY, body_found)
     wording_differs = any(d["op"] != "equal" for d in diff)
-    if wording_differs and lenient and not problems and _only_near_misses(diff):
-        return (
-            "review",
-            "The wording looks right, but a few words were hard to read. Please check the highlighted words.",
-            diff,
-        )
     if wording_differs:
         problems.append("Warning wording differs from the required text (see highlighted words).")
 

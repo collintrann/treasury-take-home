@@ -16,14 +16,14 @@ Prototype that checks alcohol label photos against their TTB application. Requir
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt   # also needs: brew install tesseract
+pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --env-file .env   # http://localhost:8000
 pytest
 ```
 
 ## Code
 
-- `app/extraction/` reads the label (Claude, with Tesseract as backup).
+- `app/extraction/` reads the label with two models under a time limit.
 - `app/matching.py` and `app/warning.py` decide each result. The AI never does.
 - `app/consensus.py` combines the two readings.
 - `app/main.py` holds the API routes. `app/static/` is the UI.

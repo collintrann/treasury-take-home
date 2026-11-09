@@ -137,19 +137,10 @@ def test_absent_warning_is_missing():
     assert check_warning(None, header_bold=None)[0] == "missing"
 
 
-def test_ocr_misread_is_review_not_fail():
-    misread = FULL_TEXT.replace("alcoholic beverages during", "alcahalic beverages during")
-    assert check_warning(misread, None, lenient=True)[0] == "review"
-    assert check_warning(misread, True, lenient=False)[0] == "fail"
 
 
-def test_ocr_mode_still_fails_real_rewording():
-    altered = FULL_TEXT.replace("may cause health problems", "can cause problems")
-    assert check_warning(altered, None, lenient=True)[0] == "fail"
 
 
-def test_ocr_mode_still_fails_title_case_header():
-    assert check_warning("Government Warning: " + BODY, None, lenient=True)[0] == "fail"
 
 
 # -------------------------------------------------------------------- rollup
@@ -186,17 +177,8 @@ def test_review_without_fail_is_review():
     assert overall == Status.REVIEW
 
 
-def test_ocr_missing_becomes_review():
-    overall, fields = verify(APP, GOOD_LABEL.model_copy(update={"class_type": None}), from_ocr=True)
-    assert next(f for f in fields if f.field == "class_type").status == Status.REVIEW
-    assert overall == Status.REVIEW
 
 
-def test_low_confidence_fail_becomes_review():
-    label = GOOD_LABEL.model_copy(update={"alcohol_content": "40%"})
-    overall, fields = verify(APP, label, from_ocr=True, low_confidence=True)
-    abv = next(f for f in fields if f.field == "alcohol_content")
-    assert abv.status == Status.REVIEW and "hard to read" in abv.note
 
 
 # ------------------------------------------------- audit regressions (M1, M6)

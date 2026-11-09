@@ -15,11 +15,6 @@ def _float(name: str, default: float) -> float:
         return default
 
 
-# "auto"   - use the AI readers when a key is configured, otherwise / on failure use OCR
-# "claude" - AI readers only (errors surface to the user)
-# "ocr"    - offline OCR only (for locked-down networks)
-EXTRACTION_MODE = os.environ.get("EXTRACTION_MODE", "auto").lower()
-
 # Two independent readers ("double-keying"). The primary is the most accurate
 # model; the secondary is a different, faster model whose job is to catch the
 # primary's silent mistakes (and vice versa). Different models matter: the same
@@ -31,8 +26,7 @@ SECONDARY_MODEL = os.environ.get("SECONDARY_MODEL", "claude-haiku-5-5").strip()
 EFFORT = os.environ.get("CLAUDE_EFFORT", "low")  # low effort = less thinking = lower latency
 
 # Hard deadline for the AI readers, which run in parallel. The stakeholder bar
-# is ~5 s end-to-end; whatever hasn't answered by now is abandoned. If neither
-# reader answered, the request falls back to OCR (about 1 s more).
+# is ~5 s end-to-end; whatever hasn't answered by now is abandoned.
 READ_DEADLINE_SECONDS = _float("READ_DEADLINE_SECONDS", _float("CLAUDE_TIMEOUT_SECONDS", 4.5))
 
 # Images are downscaled to this many pixels on the long edge before upload.

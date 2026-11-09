@@ -23,7 +23,7 @@ from .models import ApplicationData, ExtractedLabel, FieldResult, Status, Verifi
 from .warning import FULL_TEXT, check_warning
 
 # Ratio above which two non-identical strings are "probably the same thing"
-# (one or two characters off - typical of a typo or an OCR misread).
+# (one or two characters off - typical of a typo or a misread).
 REVIEW_SIMILARITY = 0.85
 
 FIELD_LABELS = {
@@ -239,16 +239,8 @@ def overall_status(results: list[FieldResult]) -> Status:
     return Status.PASS
 
 
-def verify(
-    app: ApplicationData, label: ExtractedLabel, from_ocr: bool = False, low_confidence: bool = False
-) -> tuple[Status, list[FieldResult]]:
-    """Compare every field and roll up an overall verdict.
-
-    ``from_ocr``: OCR can't prove something is *absent* (it may have just
-    failed to read it), so "missing" becomes "review".
-    ``low_confidence``: the read was shaky, so a mismatch might be a misread;
-    "fail" becomes "review" so a human makes the call.
-    """
+def verify(app: ApplicationData, label: ExtractedLabel) -> tuple[Status, list[FieldResult]]:
+    """Compare every field and roll up an overall verdict."""
     results = [
         compare_text("brand_name", app.brand_name, label.brand_name),
         compare_text("class_type", app.class_type, label.class_type),
@@ -257,7 +249,7 @@ def verify(
         compare_text("producer_name_address", app.producer_name_address, label.producer_name_address),
         compare_text("country_of_origin", app.country_of_origin, label.country_of_origin),
     ]
-    w_status, w_note, w_diff = check_warning(label.government_warning, label.warning_header_bold, lenient=from_ocr)
+    w_status, w_note, w_diff = check_warning(label.government_warning, label.warning_header_bold)
     results.append(
         FieldResult(
             field="government_warning",
@@ -270,13 +262,6 @@ def verify(
         )
     )
 
-    for r in results:
-        if from_ocr and r.status == Status.MISSING:
-            r.status = Status.REVIEW
-            r.note = f"We couldn't find the {r.label.lower()} on the label. Please check by eye."
-        elif low_confidence and r.status == Status.FAIL:
-            r.status = Status.REVIEW
-            r.note = f"Possible mismatch, but the photo is hard to read: {r.note}"
     return overall_status(results), results
 
 

@@ -31,7 +31,7 @@ Trade-offs:
 - More labels go to "Check", since every disagreement does.
 - The wait is set by the slower of the two readers.
 
-If only one reader answers in time, its results stand, except that the second reader alone can't pass the warning. If neither answers, the offline backup runs.
+If only one reader answers in time, its results stand, except that the second reader alone can't pass the warning. If neither answers, the agent sees "We couldn't read this label right now. Please try again in a minute."
 
 These choices were made before any real measurement and are still open (see the end of this doc).
 
@@ -43,15 +43,9 @@ The brief asks for about 5 seconds per label.
 - Low thinking effort and downscaled images keep calls short.
 - Real API timing has not been measured yet. `scripts/benchmark.py` measures it once there's an API key.
 
-If both readers miss the cutoff, the offline backup runs after it, so that path can take about 5.5 seconds.
+## No offline backup
 
-## Offline backup
-
-When the AI can't be reached, Tesseract reads the label on the server. This answers the brief's note that the network blocks many outside services.
-
-Its results are graded more cautiously. A field it can't find becomes "Check", not "Mismatch". It can't see bold type, so the warning is always "Check".
-
-The trade-off is a second code path that can never pass a compliant label. Removing it is an open question.
+An earlier version fell back to Tesseract, a local text-recognition program, when the AI couldn't be reached. It was removed. It could never pass a compliant label, since it can't see bold type, and it was weak on real photos. The brief's note about blocked networks is better answered in production by running Claude through Microsoft Azure, which TTB already uses.
 
 ## Matching rules
 
@@ -72,7 +66,7 @@ Built for agents with little technical comfort.
 
 ## Batch
 
-The agent uploads a CSV with one row per label, plus the image files. The browser sends four labels at a time and fills in results as they finish. Results can be filtered and downloaded as a CSV.
+The agent uploads a CSV with one row per label, plus the image files. The browser sends four labels at a time and fills in results as they finish. Results can be filtered by outcome.
 
 This needs no database or job queue. The trade-off is that closing the tab stops the batch.
 
@@ -83,7 +77,7 @@ Images are processed in memory and never stored. Labels are sent to the Anthropi
 ## Testing
 
 - Unit tests cover every matching and warning rule.
-- API tests run real Tesseract on the sample labels, with scripted stand-ins for the models.
+- API tests use scripted stand-ins for the models, covering agreement, disagreement, a slow reader and failures.
 - Twelve generated sample labels each test one case from the brief, including three subtle warning typos.
 - `scripts/benchmark.py` measures real models: speed, accuracy, and how often a reader silently fixes a typo. It hasn't been run yet.
 
@@ -98,5 +92,3 @@ Images are processed in memory and never stored. Labels are sent to the Anthropi
 
 - Which two models to use, and the cutoff time. Best decided from benchmark results.
 - What happens when only one reader answers.
-- Whether to keep the offline backup.
-- Whether to keep the CSV download.

@@ -166,7 +166,7 @@ def pair_row(primary: str, secondary: str, by_key: dict) -> list[str]:
         if not readings:
             continue
         label = (a or b).label
-        overall, _ = verify_extraction(application_for(label), Extraction("claude", readings))
+        overall, _ = verify_extraction(application_for(label), Extraction(readings))
         verdicts.append((label.expected, overall.value))
         lat.append(max(c.seconds for c in (a, b) if c))
         cents.append(sum(cost(c) for c in (a, b) if c) * 100)

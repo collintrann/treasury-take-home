@@ -331,22 +331,3 @@ $("#batch-btn").addEventListener("click", async () => {
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   btn.disabled = false;
 });
-
-function csvCell(v) { return `"${String(v ?? "").replace(/"/g, '""')}"`; }
-
-$("#download-btn").addEventListener("click", () => {
-  const header = ["filename", "result", ...FIELDS.map((f) => f + "_status"), "government_warning_status", "issues"];
-  const lines = [header.map(csvCell).join(",")];
-  for (const r of batchResults) {
-    if (!r) continue;
-    const byField = Object.fromEntries((r.result?.fields || []).map((f) => [f.field, f.status]));
-    lines.push([
-      r.filename, r.error ? "error" : r.result.overall,
-      ...FIELDS.map((f) => byField[f] || ""), byField.government_warning || "", issuesText(r),
-    ].map(csvCell).join(","));
-  }
-  const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
-  const a = Object.assign(document.createElement("a"), { href: url, download: "label-check-results.csv" });
-  a.click();
-  URL.revokeObjectURL(url);
-});

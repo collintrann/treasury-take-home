@@ -3,7 +3,7 @@
 Three layers, kept deliberately separate:
 
 * ``ApplicationData``  - what the applicant *claims* (typed in, or a CSV row).
-* ``ExtractedLabel``   - what we *read* off the label image (Claude or OCR).
+* ``ExtractedLabel``   - what we *read* off the label image.
 * ``VerificationResult`` - the field-by-field *comparison* of the two.
 
 Keeping "reading" and "judging" apart means the matching rules are plain,
@@ -99,8 +99,7 @@ class FieldResult(BaseModel):
 class VerificationResult(BaseModel):
     overall: Status
     fields: list[FieldResult]
-    extraction_method: str  # "claude" or "ocr"
-    readers: list[str] = []  # models that answered in time (AI path)
-    extraction_note: str = ""  # e.g. why we fell back to OCR
+    readers: list[str] = []  # models that answered in time
+    extraction_note: str = ""  # e.g. photo quality
     elapsed_ms: int
     filename: Optional[str] = None

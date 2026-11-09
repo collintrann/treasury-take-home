@@ -35,11 +35,10 @@ _slots = asyncio.Semaphore(config.MAX_CONCURRENCY)
 
 @app.get("/api/health")
 def health() -> dict:
-    claude = config.EXTRACTION_MODE != "ocr" and config.claude_configured()
     return {
         "status": "ok",
-        "reader": "claude" if claude else "ocr",
-        "models": [m for m, _ in config.reader_models()] if claude else [],
+        "configured": config.claude_configured(),
+        "models": [m for m, _ in config.reader_models()],
     }
 
 
@@ -71,7 +70,7 @@ async def verify_label(
 
     try:
         async with _slots:
-            result = await extract(data, application)
+            result = await extract(data)
     except InvalidImageError as exc:
         raise HTTPException(400, str(exc)) from exc
     except ClaudeExtractionError as exc:
@@ -89,8 +88,7 @@ async def verify_label(
     return VerificationResult(
         overall=overall,
         fields=fields,
-        extraction_method=result.method,
-        readers=readers if result.method == "claude" else [],
+        readers=readers,
         extraction_note=result.note,
         elapsed_ms=elapsed,
         filename=image.filename,
