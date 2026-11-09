@@ -8,7 +8,7 @@ A prototype that checks an alcohol label photo against its TTB application. It r
 
 ## Run it
 
-Needs Python 3.11 or newer and an Anthropic API key.
+Needs Python 3.11 or newer, Node.js 20 or newer, and an Anthropic API key.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -17,29 +17,27 @@ cp .env.example .env              # then add your ANTHROPIC_API_KEY
 uvicorn app.main:app --reload --env-file .env
 ```
 
-Open http://localhost:8000 and pick a label from "Try an example".
+That starts the checking service on port 8000. Then start the web page:
+
+```bash
+cd web
+npm install
+cp .env.example .env.local        # CHECKER_URL=http://localhost:8000
+npm run dev
+```
+
+Open http://localhost:3000 and pick a label from "Try an example".
+
+The page is Next.js with shadcn components. Its server forwards requests to the checking service and adds the shared secret, so the browser never calls the service directly. Photos are shrunk in the browser to stay under Vercel's 4.5 MB upload limit. The application fields are defined once, in `web/lib/fields.ts`.
 
 Run the tests with `pytest`. They need no API key or network.
 
-With Docker:
+The checking service also runs with Docker:
 
 ```bash
 docker build -t label-check .
 docker run -p 8000:8000 --env-file .env label-check
 ```
-
-## Front end
-
-`web/` is a Next.js version of the page, built to deploy on Vercel with `web/` as the root directory. It talks to the Python service through its own server routes, which add the shared secret, so the browser never calls the service directly. Photos are shrunk in the browser before upload to stay under Vercel's 4.5 MB request limit.
-
-```bash
-cd web
-npm install
-cp .env.example .env.local        # CHECKER_URL and CHECKER_SECRET
-npm run dev                       # http://localhost:3000, with the Python service running
-```
-
-The application fields are defined once, in `web/lib/fields.ts`.
 
 ## Using it
 
@@ -78,7 +76,7 @@ Runs each model on the 12 sample labels and reports speed, accuracy, and how oft
 | `app/extraction/` | Reads the label with two models under a time limit |
 | `app/matching.py`, `app/warning.py` | The rules that decide each result |
 | `app/consensus.py` | Combines the two readings |
-| `app/static/` | The web page |
+| `web/` | The web page (Next.js) |
 | `samples/` | 12 generated test labels and `batch.csv` |
 | `scripts/` | Sample generator and benchmark |
 | `tests/` | Unit and API tests, with stand-ins for the models |

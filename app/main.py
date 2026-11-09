@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
@@ -22,7 +22,6 @@ from .models import ApplicationData, VerificationResult
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("label-check")
 
-STATIC_DIR = Path(__file__).parent / "static"
 SAMPLES_DIR = Path(__file__).parent.parent / "samples"
 APP_FIELDS = list(ApplicationData.model_fields)
 
@@ -180,11 +179,5 @@ def examples() -> list[dict]:
         ]
 
 
-@app.get("/")
-def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
-
-
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 if SAMPLES_DIR.exists():
     app.mount("/samples", StaticFiles(directory=SAMPLES_DIR), name="samples")

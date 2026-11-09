@@ -195,9 +195,8 @@ def test_parse_manifest_requires_filename_column():
     assert res.status_code == 400
 
 
-def test_examples_and_static():
+def test_examples_and_samples():
     assert len(client.get("/api/examples").json()) == 12
-    assert client.get("/").status_code == 200
     assert client.get("/samples/01_old_tom_compliant.png").status_code == 200
     assert client.get("/api/health").json()["status"] == "ok"
 
@@ -230,11 +229,15 @@ def test_user_facing_text_never_mentions_internals(fake_claude, monkeypatch, sce
 
 
 def test_ui_source_never_mentions_internals():
-    static = Path(__file__).parent.parent / "app" / "static"
-    visible = re.sub(r"<[^>]+>", " ", (static / "index.html").read_text())
-    strings = re.findall(r"`[^`]*`|\"[^\"]*\"", (static / "app.js").read_text())
-    for text in [visible, *strings]:
-        assert not re.search(r"\b(AI|OCR|Claude|Opus|Haiku|Sonnet|model)\b", text), text
+    web = Path(__file__).parent.parent / "web"
+    sources = [*web.glob("app/*.tsx"), *web.glob("components/*.tsx"), web / "lib" / "api.ts", web / "lib" / "fields.ts"]
+    assert sources
+    for source in sources:
+        code = source.read_text()
+        jsx_text = re.findall(r">([^<>{}]+)<", code)
+        strings = re.findall(r"`[^`]*`|\"[^\"]*\"|'[^']*'", code)
+        for text in [*jsx_text, *strings]:
+            assert not re.search(r"\b(AI|OCR|Claude|Opus|Haiku|Sonnet|model|models)\b", text), f"{source.name}: {text}"
 
 
 def test_checker_secret_is_required_when_configured(monkeypatch):
