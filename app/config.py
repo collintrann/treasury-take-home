@@ -25,9 +25,9 @@ SECONDARY_MODEL = os.environ.get("SECONDARY_MODEL", "claude-haiku-5-5").strip()
 
 EFFORT = os.environ.get("CLAUDE_EFFORT", "low")  # low effort = less thinking = lower latency
 
-# Hard deadline for the AI readers, which run in parallel. The stakeholder bar
-# is ~5 s end-to-end; whatever hasn't answered by now is abandoned.
-READ_DEADLINE_SECONDS = _float("READ_DEADLINE_SECONDS", 4.5)
+# Guard against a hung call. The readers run in parallel and usually finish
+# well inside the ~5 s target; whatever hasn't answered by now is abandoned.
+READ_DEADLINE_SECONDS = _float("READ_DEADLINE_SECONDS", 15)
 
 # Images are downscaled to this many pixels on the long edge before upload.
 # Claude's vision encoder doesn't benefit from more, and smaller = faster.
@@ -35,7 +35,7 @@ MAX_IMAGE_EDGE = int(_float("MAX_IMAGE_EDGE", 1568))
 
 MAX_UPLOAD_BYTES = int(_float("MAX_UPLOAD_MB", 15) * 1024 * 1024)
 
-# How many labels the server will process at the same time.
+# How many labels the server checks at the same time.
 MAX_CONCURRENCY = int(_float("MAX_CONCURRENCY", 8))
 
 # When set, every /api route except health requires this value in the

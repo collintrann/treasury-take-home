@@ -1,16 +1,13 @@
-"""Deterministic comparison rules: application value vs. what's on the label.
+"""Rules that compare each application field with what the label shows.
 
-Design notes
-------------
-* Every comparison returns one of PASS / REVIEW / FAIL / MISSING / SKIPPED and
-  a plain-English note. REVIEW exists because, as Dave put it, "you need
-  judgment" - we surface near-misses rather than silently pass or reject them.
-* Text fields: an exact match passes. A match that differs only in
-  case/punctuation/spacing ("STONE'S THROW" vs "Stone's Throw") also passes,
-  with a note. A close-but-different value (one typo) goes to REVIEW. Anything
-  else fails.
-* Numeric fields (ABV, net contents) are compared as *numbers*, so
-  "45% Alc./Vol." == "45 % ALC/VOL" and "75 cl" == "750 mL".
+* Text fields pass when identical, or the same apart from capitalization and
+  punctuation ("STONE'S THROW" matches "Stone's Throw"). Near-misses and extra
+  or missing words go to needs_review. A clearly different value fails.
+* Alcohol content and net contents are compared as numbers, so "90 Proof"
+  equals 45% and 0.75 L equals 750 mL.
+* Which fields apply depends on the product type (``_not_evaluated_reason``).
+  A field missing from the photo is needs_review, never fail: it may be on
+  another panel of the label.
 """
 
 from __future__ import annotations
@@ -19,11 +16,10 @@ import difflib
 import re
 import unicodedata
 
-from .models import ApplicationData, ExtractedLabel, FieldResult, Status
-from .warning import FULL_TEXT, check_warning
+from .models import Application, ExtractedLabel, Finding, ProductType, Status
 
 # Ratio above which two non-identical strings are "probably the same thing"
-# (one or two characters off - typical of a typo or a misread).
+# (one or two characters off, typical of a typo or a misread).
 REVIEW_SIMILARITY = 0.85
 
 FIELD_LABELS = {
@@ -33,8 +29,10 @@ FIELD_LABELS = {
     "net_contents": "Net contents",
     "producer_name_address": "Bottler / producer",
     "country_of_origin": "Country of origin",
-    "government_warning": "Government warning",
 }
+
+# Wine at or under this strength may leave alcohol content off the label.
+WINE_ABV_OPTIONAL_UP_TO = 14.0
 
 
 # --------------------------------------------------------------------------- text
@@ -56,7 +54,7 @@ def similarity(a: str, b: str) -> float:
 # Standard label phrasing that wraps a value. Stripped from both sides before
 # comparing, so "Product of Scotland" matches "Scotland" but "Product of New
 # Mexico" does not match "Mexico".
-_ROLE = r"(?:distilled|bottled|produced|brewed|blended|made|imported|vinted|cellared|packed)"
+_ROLE = r"(?:distilled|bottled|produced|brewed|blended|made|imported|vinted|cellared|packed|canned)"
 _LABEL_PHRASING = {
     "country_of_origin": re.compile(r"^(?:product of|produce of|made in|imported from) "),
     "producer_name_address": re.compile(rf"^{_ROLE}(?: and {_ROLE})* (?:by|for) "),
@@ -68,43 +66,25 @@ def _strip_phrasing(key: str, normalized: str) -> str:
     return pattern.sub("", normalized) if pattern else normalized
 
 
-def compare_text(key: str, expected: str, found: str | None) -> FieldResult:
-    label = FIELD_LABELS[key]
-    base = dict(field=key, label=label, expected=expected or None, found=found)
-
-    if not normalize(expected):
-        return FieldResult(**base, status=Status.SKIPPED, note="Not provided in the application.")
-    if not found or not found.strip():
-        return FieldResult(**base, status=Status.MISSING, note=f"{label} was not found on the label.")
-
+def compare_text(key: str, expected: str, found: str) -> tuple[Status, str]:
+    """Compare one text field. Both values are present."""
     if " ".join(expected.split()) == " ".join(found.split()):
-        return FieldResult(**base, status=Status.PASS, note="Exact match.")
+        return "pass", "Exact match."
 
     n_exp, n_found = normalize(expected), normalize(found)
     if n_exp == n_found:
-        return FieldResult(
-            **base, status=Status.PASS, note="Matches (differs only in capitalization or punctuation)."
-        )
-
+        return "pass", "Matches (differs only in capitalization or punctuation)."
     if _strip_phrasing(key, n_exp) == _strip_phrasing(key, n_found):
-        return FieldResult(**base, status=Status.PASS, note="Matches (with standard label wording around it).")
+        return "pass", "Matches (with standard label wording around it)."
 
     ratio = similarity(expected, found)
     if ratio >= REVIEW_SIMILARITY:
-        return FieldResult(
-            **base,
-            status=Status.REVIEW,
-            note=f"Very close but not identical ({ratio:.0%} similar) - please check by eye.",
-        )
+        return "needs_review", f"Very close but not identical ({ratio:.0%} similar). Please check by eye."
     if re.search(rf"\b{re.escape(n_found)}\b", n_exp):
-        return FieldResult(
-            **base, status=Status.REVIEW, note="Label shows only part of the application value - please check."
-        )
+        return "needs_review", "The label shows only part of the application value. Please check."
     if re.search(rf"\b{re.escape(n_exp)}\b", n_found):
-        return FieldResult(
-            **base, status=Status.REVIEW, note="Label has extra words around the application value - please check."
-        )
-    return FieldResult(**base, status=Status.FAIL, note="Does not match the application.")
+        return "needs_review", "The label has extra words around the application value. Please check."
+    return "fail", "Does not match the application."
 
 
 # ------------------------------------------------------------------------ alcohol
@@ -137,36 +117,27 @@ def parse_abv(text: str) -> tuple[float | None, float | None]:
     return (_num(abv_text) if abv_text else None, _num(proof.group(1)) if proof else None)
 
 
-def compare_alcohol(expected: str, found: str | None) -> FieldResult:
-    key = "alcohol_content"
-    base = dict(field=key, label=FIELD_LABELS[key], expected=expected or None, found=found)
-    if not expected.strip():
-        return FieldResult(**base, status=Status.SKIPPED, note="Not provided in the application.")
-    if not found or not found.strip():
-        return FieldResult(**base, status=Status.MISSING, note="No alcohol content statement found on the label.")
+def abv_percent(text: str) -> float | None:
+    """The alcohol content as a percentage, from either % or proof (US proof is 2x ABV)."""
+    abv, proof = parse_abv(text)
+    if abv is not None:
+        return abv
+    return proof / 2 if proof is not None else None
 
-    exp_abv, exp_proof = parse_abv(expected)
-    got_abv, got_proof = parse_abv(found)
-    # Proof is defined as 2x ABV in the US; derive whichever side is missing.
-    exp_abv = exp_abv if exp_abv is not None else (exp_proof / 2 if exp_proof is not None else None)
-    got_abv_eff = got_abv if got_abv is not None else (got_proof / 2 if got_proof is not None else None)
 
-    if exp_abv is None or got_abv_eff is None:
-        return compare_text(key, expected, found)  # can't parse numbers; fall back
+def compare_alcohol(expected: str, found: str) -> tuple[Status, str]:
+    exp_abv, got_abv = abv_percent(expected), abv_percent(found)
+    if exp_abv is None or got_abv is None:
+        return compare_text("alcohol_content", expected, found)
+    if abs(exp_abv - got_abv) > 0.001:
+        return "fail", f"The application says {exp_abv:g}% but the label says {got_abv:g}%."
 
-    if abs(exp_abv - got_abv_eff) > 0.001:
-        return FieldResult(
-            **base,
-            status=Status.FAIL,
-            note=f"Application says {exp_abv:g}% ABV but the label says {got_abv_eff:g}%.",
+    label_abv, label_proof = parse_abv(found)
+    if label_abv is not None and label_proof is not None and abs(label_proof - 2 * label_abv) > 0.001:
+        return "fail", (
+            f"The label contradicts itself: {label_abv:g}% should be {2 * label_abv:g} proof, not {label_proof:g}."
         )
-    if got_abv is not None and got_proof is not None and abs(got_proof - 2 * got_abv) > 0.001:
-        return FieldResult(
-            **base,
-            status=Status.FAIL,
-            note=f"Label is inconsistent: {got_abv:g}% ABV should be {2 * got_abv:g} proof, not {got_proof:g}.",
-        )
-    return FieldResult(**base, status=Status.PASS, note=f"{exp_abv:g}% ABV matches.")
+    return "pass", f"{exp_abv:g}% matches."
 
 
 # --------------------------------------------------------------------- net volume
@@ -206,61 +177,62 @@ def parse_volume_ml(text: str) -> float | None:
     return _num(m.group(1)) * _UNITS[m.group(2).lower()]
 
 
-def compare_volume(expected: str, found: str | None) -> FieldResult:
-    key = "net_contents"
-    base = dict(field=key, label=FIELD_LABELS[key], expected=expected or None, found=found)
-    if not expected.strip():
-        return FieldResult(**base, status=Status.SKIPPED, note="Not provided in the application.")
-    if not found or not found.strip():
-        return FieldResult(**base, status=Status.MISSING, note="No net contents statement found on the label.")
-
+def compare_volume(expected: str, found: str) -> tuple[Status, str]:
     exp_ml, got_ml = parse_volume_ml(expected), parse_volume_ml(found)
     if exp_ml is None or got_ml is None:
-        return compare_text(key, expected, found)
-
+        return compare_text("net_contents", expected, found)
     if abs(exp_ml - got_ml) <= max(exp_ml, got_ml) * 0.005:  # 0.5% tolerance for unit rounding
         same_text = normalize(expected).replace(" ", "") == normalize(found).replace(" ", "")
-        note = "Matches." if same_text else f"Same volume ({exp_ml:g} mL) written differently."
-        return FieldResult(**base, status=Status.PASS, note=note)
-    return FieldResult(
-        **base, status=Status.FAIL, note=f"Application says {exp_ml:g} mL but the label says {got_ml:g} mL."
-    )
+        return "pass", "Matches." if same_text else f"Same amount ({exp_ml:g} mL) written differently."
+    return "fail", f"The application says {exp_ml:g} mL but the label says {got_ml:g} mL."
 
 
-# ------------------------------------------------------------------------ overall
+# -------------------------------------------------------------- applicability
 
 
-def overall_status(results: list[FieldResult]) -> Status:
-    statuses = {r.status for r in results}
-    if statuses & {Status.FAIL, Status.MISSING}:
-        return Status.FAIL
-    if Status.REVIEW in statuses:
-        return Status.REVIEW
-    return Status.PASS
+def _not_evaluated_reason(key: str, product_type: ProductType, expected: str, found: str | None) -> str | None:
+    """Why this field isn't checked for this product, or None when it is."""
+    if not normalize(expected):
+        return "Not an import." if key == "country_of_origin" else "Not provided in the application."
+    if key == "alcohol_content" and not found:
+        if product_type == "malt_beverage":
+            return "Not required for malt beverages."
+        abv = abv_percent(expected)
+        if product_type == "wine" and abv is not None and abv <= WINE_ABV_OPTIONAL_UP_TO:
+            return "Not required for wine at 14% or less."
+    return None
 
 
-def verify(app: ApplicationData, label: ExtractedLabel) -> tuple[Status, list[FieldResult]]:
-    """Compare every field and roll up an overall verdict."""
-    results = [
-        compare_text("brand_name", app.brand_name, label.brand_name),
-        compare_text("class_type", app.class_type, label.class_type),
-        compare_alcohol(app.alcohol_content, label.alcohol_content),
-        compare_volume(app.net_contents, label.net_contents),
-        compare_text("producer_name_address", app.producer_name_address, label.producer_name_address),
-        compare_text("country_of_origin", app.country_of_origin, label.country_of_origin),
-    ]
-    w_status, w_note, w_diff = check_warning(label.government_warning, label.warning_header_bold)
-    results.append(
-        FieldResult(
-            field="government_warning",
-            label=FIELD_LABELS["government_warning"],
-            expected=FULL_TEXT,
-            found=label.government_warning,
-            status=w_status,
-            note=w_note,
-            diff=w_diff,
+def _compare(key: str, expected: str, found: str) -> tuple[Status, str]:
+    if key == "alcohol_content":
+        return compare_alcohol(expected, found)
+    if key == "net_contents":
+        return compare_volume(expected, found)
+    return compare_text(key, expected, found)
+
+
+def application_findings(product_type: ProductType, app: Application, label: ExtractedLabel) -> list[Finding]:
+    """One finding per application field, in the order of ``Application``."""
+    findings = []
+    for key, name in FIELD_LABELS.items():
+        expected = getattr(app, key).strip()
+        found = (getattr(label, key) or "").strip() or None
+        reason = _not_evaluated_reason(key, product_type, expected, found)
+        if reason:
+            status, explanation = "not_evaluated", reason
+        elif found is None:
+            status, explanation = "needs_review", "Not found in this image. It may be on another part of the label."
+        else:
+            status, explanation = _compare(key, expected, found)
+        findings.append(
+            Finding(
+                key=key,
+                group="application",
+                label=name,
+                status=status,
+                expected=expected or None,
+                observed=found,
+                explanation=explanation,
+            )
         )
-    )
-
-    return overall_status(results), results
-
+    return findings

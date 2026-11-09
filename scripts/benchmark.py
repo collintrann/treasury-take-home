@@ -1,4 +1,4 @@
-"""Benchmark AI readers (alone and in pairs) on the sample labels.
+"""Benchmark AI readers (alone and in pairs) on the review queue labels.
 
     ANTHROPIC_API_KEY=... python scripts/benchmark.py --runs 3
 
@@ -8,14 +8,16 @@ What it measures, per model and per primary+secondary pairing:
   * silent corrections: the label has a typo but the reader returned the
     correct regulatory text - the failure that causes false PASSes
   * bold detection accuracy
-  * verdict accuracy, false PASS (worst), false FAIL, and how often a label is
-    routed to human review
+  * verdict accuracy against each item's expected_overall, false PASS (worst),
+    false FAIL, and how often a label is routed to needs review
   * approximate cost per label
 
-Ground truth comes from scripts/generate_samples.py, which knows exactly what
-it printed on each label. Results are written to docs/benchmark-results.md.
+Applications and expected results come from samples/queue/applications.json.
+What was printed on each label (for the warning and bold scores) comes from
+scripts/generate_samples.py, which made the images. Results are written to
+docs/benchmark-results.md.
 
-Note: this makes real, billed API calls (roughly 12 labels x models x runs).
+Note: this makes real, billed API calls (25 labels x models x runs).
 """
 
 from __future__ import annotations
@@ -43,14 +45,16 @@ from app import config  # noqa: E402
 # Measure true model latency, not our deadline: give calls plenty of time.
 config.READ_DEADLINE_SECONDS = 120
 
-from app.consensus import verify_extraction  # noqa: E402
-from app.extraction import Extraction, Reading  # noqa: E402
+from app.consensus import decide  # noqa: E402
+from app.extraction import Reading  # noqa: E402
 from app.extraction.claude_reader import extract_with_claude  # noqa: E402
 from app.extraction.image import load_image, to_upload_jpeg  # noqa: E402
-from app.matching import verify  # noqa: E402
-from app.models import ApplicationData, ExtractedLabel  # noqa: E402
+from app.models import ExtractedLabel, QueueEntry  # noqa: E402
+from app.queue import QUEUE_DIR, load_queue  # noqa: E402
 from app.warning import FULL_TEXT  # noqa: E402
-from generate_samples import LABELS, OUT, Label  # noqa: E402
+from generate_samples import CASES, Printed  # noqa: E402
+
+PRINTED = {c.id: c.printed for c in CASES}
 
 # USD per million tokens (input, output). Update if pricing changes.
 PRICES = {
@@ -64,7 +68,7 @@ BUDGET_SECONDS = 5.0
 @dataclass
 class Call:
     model: str
-    label: Label
+    entry: QueueEntry
     run: int
     seconds: float
     result: ExtractedLabel | None
@@ -76,32 +80,24 @@ def squash(text: str | None) -> str:
     return " ".join((text or "").split())
 
 
-def printed_warning(label: Label) -> str | None:
-    if not label.warning_header and not label.warning_body:
+def printed_warning(p: Printed) -> str | None:
+    if not p.has_warning:
         return None
-    return squash(f"{label.warning_header or ''} {label.warning_body}")
+    return squash(f"{p.warning_header or ''} {p.warning_body}")
 
 
-def application_for(label: Label) -> ApplicationData:
-    fields = {
-        "brand_name": label.brand,
-        "class_type": label.class_type,
-        "alcohol_content": label.abv,
-        "net_contents": label.net,
-        "producer_name_address": label.producer,
-        "country_of_origin": label.country,
-    }
-    return ApplicationData(**(fields | label.app))  # label.app = deliberate application differences
+def overall_for(entry: QueueEntry, readings: list[Reading]) -> str:
+    return decide(entry.product_type, entry.application, readings).overall
 
 
-async def timed_call(model: str, label: Label, run: int, jpeg: bytes) -> Call:
+async def timed_call(model: str, entry: QueueEntry, run: int, jpeg: bytes) -> Call:
     usage: dict = {}
     start = time.perf_counter()
     try:
         result = await extract_with_claude(jpeg, model, usage=usage)
-        return Call(model, label, run, time.perf_counter() - start, result, None, usage)
+        return Call(model, entry, run, time.perf_counter() - start, result, None, usage)
     except Exception as exc:  # benchmark records every failure rather than stopping
-        return Call(model, label, run, time.perf_counter() - start, None, str(exc), usage)
+        return Call(model, entry, run, time.perf_counter() - start, None, str(exc), usage)
 
 
 def pct(values: list[float], q: float) -> float:
@@ -118,7 +114,7 @@ def verdict_stats(pairs: list[tuple[str, str]]) -> dict:
         "correct": sum(e == a for e, a in pairs),
         "false_pass": sum(e != "pass" and a == "pass" for e, a in pairs),
         "false_fail": sum(e == "pass" and a == "fail" for e, a in pairs),
-        "review": sum(a == "review" for _, a in pairs),
+        "review": sum(a == "needs_review" for _, a in pairs),
         "n": n,
     }
 
@@ -131,20 +127,25 @@ def cost(call: Call) -> float:
 def model_stats(calls: list[Call]) -> dict:
     """Score one model's calls. Every value is a number, for the report and the tests."""
     ok = [c for c in calls if c.result]
-    warn = [c for c in ok if printed_warning(c.label)]
-    typo = [c for c in warn if printed_warning(c.label) != FULL_TEXT and c.label.warning_header]
-    bold = [c for c in warn if c.label.warning_header]
-    verdicts = [(c.label.expected, verify(application_for(c.label), c.result)[0].value) for c in ok]
+    printed = {c.entry.id: PRINTED[c.entry.id] for c in calls}
+    warn = [c for c in ok if printed_warning(printed[c.entry.id])]
+    typo = [c for c in warn if printed_warning(printed[c.entry.id]) != FULL_TEXT]
+    bold = [c for c in warn if printed[c.entry.id].warning_header]
+    verdicts = [
+        (c.entry.expected_overall, overall_for(c.entry, [Reading(c.model, "primary", c.result)])) for c in ok
+    ]
     return {
         "ok": len(ok),
         "calls": len(calls),
         "latencies": [c.seconds for c in ok],
         "warnings": len(warn),
-        "warning_exact": sum(squash(c.result.government_warning) == printed_warning(c.label) for c in warn),
+        "warning_exact": sum(
+            squash(c.result.government_warning) == printed_warning(printed[c.entry.id]) for c in warn
+        ),
         "typo_labels": len(typo),
         "silent_corrections": sum(squash(c.result.government_warning) == FULL_TEXT for c in typo),
         "bold_labels": len(bold),
-        "bold_right": sum(c.result.warning_header_bold == c.label.header_bold for c in bold),
+        "bold_right": sum(c.result.warning_header_bold == printed[c.entry.id].header_bold for c in bold),
         "cents": [cost(c) * 100 for c in ok],
         **verdict_stats(verdicts),
     }
@@ -162,9 +163,8 @@ def pair_stats(primary: str, secondary: str, by_key: dict) -> dict:
             readings.append(Reading(secondary, "secondary", b.result))
         if not readings:
             continue
-        label = (a or b).label
-        overall, _ = verify_extraction(application_for(label), Extraction(readings))
-        verdicts.append((label.expected, overall.value))
+        entry = (a or b).entry
+        verdicts.append((entry.expected_overall, overall_for(entry, readings)))
         latencies.append(max(c.seconds for c in (a, b) if c))
         cents.append(sum(cost(c) for c in (a, b) if c) * 100)
     return {"latencies": latencies, "cents": cents, **verdict_stats(verdicts)}
@@ -214,23 +214,24 @@ async def main() -> None:
 
     config.EFFORT = args.effort
     models = [m.strip() for m in args.models.split(",") if m.strip()]
-    jpegs = {lab.filename: to_upload_jpeg(load_image((OUT / lab.filename).read_bytes())) for lab in LABELS}
+    entries = list(load_queue().values())
+    jpegs = {e.id: to_upload_jpeg(load_image((QUEUE_DIR / e.image).read_bytes())) for e in entries}
 
     calls: list[Call] = []
-    total = args.runs * len(LABELS)
+    total = args.runs * len(entries)
     for run in range(args.runs):
-        for i, lab in enumerate(LABELS):
+        for i, entry in enumerate(entries):
             # All models at once, as in production, so latency reflects real contention.
-            batch = await asyncio.gather(*(timed_call(m, lab, run, jpegs[lab.filename]) for m in models))
+            batch = await asyncio.gather(*(timed_call(m, entry, run, jpegs[entry.id]) for m in models))
             calls.extend(batch)
-            done = run * len(LABELS) + i + 1
+            done = run * len(entries) + i + 1
             summary = ", ".join(f"{c.model.split('-')[1]} {c.seconds:.1f}s{' ERR' if c.error else ''}" for c in batch)
-            print(f"[{done}/{total}] {lab.filename}: {summary}", flush=True)
+            print(f"[{done}/{total}] {entry.id}: {summary}", flush=True)
 
     errors = [c for c in calls if c.error]
     by_key: dict = {}
     for c in calls:
-        by_key.setdefault((c.run, c.label.filename), {})[c.model] = c
+        by_key.setdefault((c.run, c.entry.id), {})[c.model] = c
 
     single = table(
         ["Model", "OK", "Latency p50 / p90 (s)", "≤ 5 s", "Warning exact", "Silent corrections",
@@ -247,9 +248,9 @@ async def main() -> None:
     report = f"""# Benchmark results
 
 Generated by `scripts/benchmark.py` on {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M UTC}:
-{len(LABELS)} sample labels × {args.runs} runs, effort `{args.effort}`, all models called concurrently per label.
+{len(entries)} queue labels × {args.runs} runs, effort `{args.effort}`, all models called concurrently per label.
 
-**Caveats:** synthetic labels (see `samples/`), small sample, and latency measured from the
+**Caveats:** synthetic labels (see `samples/queue/`), small sample, and latency measured from the
 build environment, not TTB's network. Treat it as a comparison between options, not a forecast.
 
 ## Single models
@@ -268,9 +269,9 @@ Pair latency is the slower of the two readers (they run in parallel).
 * **Silent corrections** counts typo'd warnings that a reader returned as the *correct*
   regulatory text. A single reader doing this produces a false PASS; a pairing only does if
   both readers make the same correction.
-* **→ Review** is the cost of caution: labels sent to a human. Too high, and agents stop
+* **→ Review** (needs review) is the cost of caution: labels sent to a human. Too high, and agents stop
   trusting the tool.
-* Errors: {len(errors)}{''.join(f'{chr(10)}  * `{c.model}` on {c.label.filename}: {c.error}' for c in errors[:10])}
+* Errors: {len(errors)}{''.join(f'{chr(10)}  * `{c.model}` on {c.entry.id}: {c.error}' for c in errors[:10])}
 """
     Path(args.out).parent.mkdir(exist_ok=True)
     Path(args.out).write_text(report)

@@ -21,12 +21,19 @@ Transcribe what is printed. Do not fix, normalize or complete anything:
 - Keep the label's capitalization, punctuation and spelling, typos included. \
 A reviewer compares your transcription to the required text, so a "corrected" \
 transcription hides the very errors they are looking for.
-- If a field is not on the label, return null. Do not guess it from context.
+- If a field is not visible in this image, return null. Do not guess it from \
+context. It may be on another panel of the label.
 - The photo may be angled, curved around a bottle, glary or low-contrast. Read \
-through that where you can, and say what got in the way in image_issues.
+through that where you can, and say what got in the way in image_issues, \
+written for a reviewer and describing only the photo.
+- Set image_readable to false when you can't read the text with confidence. \
+Uncertain is not the same as absent: don't return a confident transcription \
+of text you can't make out.
 - For the government warning, transcribe the whole statement, from its lead-in \
 ("GOVERNMENT WARNING:" or however it is actually written) to the end. Judge \
-separately whether the lead-in words are set in bold type."""
+its typography separately: lead-in bold, rest not bold, one continuous \
+paragraph, set apart from other text, and legible. Answer null for any of \
+these you can't judge from the photo."""
 
 
 class ClaudeExtractionError(RuntimeError):

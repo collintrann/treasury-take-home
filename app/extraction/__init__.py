@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 from .. import config
@@ -14,19 +14,14 @@ from .image import InvalidImageError, load_image, to_upload_jpeg
 
 log = logging.getLogger(__name__)
 
-__all__ = ["extract", "Extraction", "Reading", "InvalidImageError", "ClaudeExtractionError"]
+__all__ = ["extract", "Reading", "InvalidImageError", "ClaudeExtractionError"]
+
 
 @dataclass
 class Reading:
     model: str
     role: Literal["primary", "secondary"]
     label: ExtractedLabel
-
-
-@dataclass
-class Extraction:
-    readings: list[Reading] = field(default_factory=list)  # primary first
-    note: str = ""  # shown to the agent, e.g. photo quality
 
 
 async def read_with_models(jpeg: bytes) -> tuple[list[Reading], list[str]]:
@@ -56,8 +51,11 @@ async def read_with_models(jpeg: bytes) -> tuple[list[Reading], list[str]]:
     return readings, failures
 
 
-async def extract(data: bytes) -> Extraction:
-    """Read a label image. Raises InvalidImageError or ClaudeExtractionError."""
+async def extract(data: bytes) -> list[Reading]:
+    """Read a label image; returns at least one reading, primary first.
+
+    Raises InvalidImageError or ClaudeExtractionError.
+    """
     jpeg = to_upload_jpeg(load_image(data))
     if not config.claude_configured():
         raise ClaudeExtractionError("no ANTHROPIC_API_KEY is set")
@@ -66,4 +64,4 @@ async def extract(data: bytes) -> Extraction:
         log.warning("reader failed: %s", f)
     if not readings:
         raise ClaudeExtractionError("; ".join(failures))
-    return Extraction(readings, readings[0].label.image_issues or "")
+    return readings

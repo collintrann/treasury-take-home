@@ -1,78 +1,82 @@
-"""Reconcile two independent AI readings into one verdict ("double-keying").
+"""Turn one or two readings of a label into the final result ("double-keying").
 
-Why compare *verdicts* instead of raw text?
-    The readers may format the same thing differently ("45% Alc./Vol." vs
-    "45% ALC/VOL"). The matching rules already know those are equivalent, so
-    we run the rules on each reading and compare the outcomes. Text-level
-    disagreement only matters if it changes the verdict.
+Each reading is judged on its own by the same rules, then the findings are
+merged. Comparing verdicts rather than raw text means "45% Alc./Vol." and
+"45% ALC/VOL" don't count as a disagreement.
 
-The safety property this module guarantees:
-    A field can only PASS if every reader that answered passed it.
-
-The dangerous error in label review is a false PASS (a bad label approved).
-The likeliest cause is a model silently "fixing" a typo while transcribing.
-Two different models rarely make the same silent fix, so any pass/not-pass
-split goes to a human. See docs/DESIGN.md.
+The safety property: a finding passes only if every reader that answered
+passed it. Any disagreement goes to needs_review, since a fail needs evidence
+both readers saw. The likeliest cause of a false pass is a reader quietly
+fixing a typo while transcribing, and two different models rarely make the
+same fix. See docs/DESIGN.md.
 """
 
 from __future__ import annotations
 
-from .extraction import Extraction
-from .matching import overall_status, verify
-from .models import ApplicationData, FieldResult, Status
+from .extraction import Reading
+from .matching import application_findings
+from .models import Application, CheckResult, Finding, Overall, ProductType
+from .warning import warning_findings
 
-# Higher = worse. MISSING and FAIL both mean "not compliant as read".
-_SEVERITY = {Status.SKIPPED: 0, Status.PASS: 1, Status.REVIEW: 2, Status.FAIL: 3, Status.MISSING: 3}
+DISAGREE = "We couldn't confirm this item. Please check the label."
+UNCONFIRMED = "This looks right, but we couldn't fully confirm it. Please check the label."
+UNCLEAR_IMAGE = "This image can't be reliably assessed. Request a clearer image."
+UNCLEAR_FAIL = " The photo isn't clear enough to be sure."
 
 
-def merge_field(primary: FieldResult, secondary: FieldResult) -> FieldResult:
-    """Combine one field's results from the two readers."""
-    if primary.status == secondary.status:
-        return primary.model_copy(update={"agreement": "agreed"})
+def judge_reading(product_type: ProductType, app: Application, reading: Reading) -> list[Finding]:
+    return application_findings(product_type, app, reading.label) + warning_findings(reading.label)
 
-    passed = {primary.status, secondary.status} & {Status.PASS}
-    if passed:
-        # The case this whole design exists for: one says fine, one says not.
-        # Show the objecting reader's word diff, so the agent sees *where* to look.
-        objector = primary if primary.status != Status.PASS else secondary
-        return primary.model_copy(
-            update={
-                "status": Status.REVIEW,
-                "agreement": "disputed",
-                "diff": objector.diff,
-                "note": "We couldn't confirm this item. Please check the label.",
-            }
+
+def merge(findings: list[Finding]) -> Finding:
+    """Combine one finding (same key) across readers."""
+    if len({f.status for f in findings}) == 1:
+        return findings[0]
+    # Show what the objecting reader saw, so the agent knows where to look.
+    objector = next(f for f in findings if f.status != "pass")
+    observed = objector.observed or next((f.observed for f in findings if f.observed), None)
+    return objector.model_copy(update={"status": "needs_review", "explanation": DISAGREE, "observed": observed})
+
+
+def _secondary_alone(finding: Finding) -> Finding:
+    # A fast secondary reader's typical failure is silently correcting the
+    # warning, so on its own it can't pass anything about the warning's text
+    # or look. Whether a warning is there at all it can still confirm.
+    if finding.group == "warning" and finding.status == "pass" and finding.key != "warning_present":
+        return finding.model_copy(update={"status": "needs_review", "explanation": UNCONFIRMED})
+    return finding
+
+
+def overall(findings: list[Finding]) -> Overall:
+    statuses = {f.status for f in findings}
+    if "fail" in statuses:
+        return "fail"
+    if "needs_review" in statuses:
+        return "needs_review"
+    return "pass"
+
+
+def decide(product_type: ProductType, app: Application, readings: list[Reading]) -> CheckResult:
+    """The final result for one label. ``readings`` is non-empty, primary first. elapsed_ms is left at 0."""
+    per_reader = [judge_reading(product_type, app, r) for r in readings]
+    findings = [merge(list(same_key)) for same_key in zip(*per_reader, strict=True)]
+    if len(readings) == 1 and readings[0].role == "secondary":
+        findings = [_secondary_alone(f) for f in findings]
+
+    assessable = all(r.label.image_readable for r in readings)
+    issues = next((r.label.image_issues.strip() for r in readings if (r.label.image_issues or "").strip()), "")
+    if assessable:
+        return CheckResult(
+            overall=overall(findings), image_assessable=True, image_note=issues, findings=findings, elapsed_ms=0
         )
 
-    # Neither passed (e.g. REVIEW vs FAIL): both already route it to a human,
-    # so keep the more severe finding rather than water it down.
-    worse = primary if _SEVERITY[primary.status] >= _SEVERITY[secondary.status] else secondary
-    return worse.model_copy(update={"agreement": "agreed"})
-
-
-def verify_extraction(app: ApplicationData, extraction: Extraction) -> tuple[Status, list[FieldResult]]:
-    """Turn an Extraction (one or two readings) into the final verdict."""
-    per_reader = [verify(app, r.label)[1] for r in extraction.readings]
-
-    if len(per_reader) >= 2:
-        fields = [merge_field(a, b) for a, b in zip(per_reader[0], per_reader[1], strict=True)]
-        return overall_status(fields), fields
-
-    # Only one reader answered.
-    (only,), (reading,) = per_reader, extraction.readings
-    fields = []
-    for f in only:
-        f = f.model_copy(update={"agreement": "single"})
-        # Silent auto-correction is the weaker model's characteristic failure,
-        # and the warning is the field where it matters. If only the fast
-        # secondary answered, its clean warning read isn't trusted on its own.
-        if reading.role == "secondary" and f.field == "government_warning" and f.status == Status.PASS:
-            f = f.model_copy(
-                update={
-                    "status": Status.REVIEW,
-                    "note": "The wording looks correct, but we couldn't fully confirm it. "
-                    "Please check the exact text on the label.",
-                }
-            )
-        fields.append(f)
-    return overall_status(fields), fields
+    # A fail needs reliable evidence, which an unclear photo can't give. And
+    # nothing passes overall on a photo that couldn't be read with confidence.
+    findings = [
+        f.model_copy(update={"status": "needs_review", "explanation": f.explanation + UNCLEAR_FAIL})
+        if f.status == "fail"
+        else f
+        for f in findings
+    ]
+    note = f"{UNCLEAR_IMAGE} {issues}".strip()
+    return CheckResult(overall="needs_review", image_assessable=False, image_note=note, findings=findings, elapsed_ms=0)

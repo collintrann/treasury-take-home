@@ -1,7 +1,7 @@
 """Benchmark scoring, checked with simulated readers (no API calls).
 
 Also pins down the core claim of the two-reader design: a reader that silently
-"fixes" typos produces false PASSes alone, and none when paired with a
+"fixes" typos produces false passes alone, and none when paired with a
 faithful reader.
 """
 
@@ -13,34 +13,45 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import benchmark as bm  # noqa: E402
 from app.models import ExtractedLabel  # noqa: E402
+from app.queue import load_queue  # noqa: E402
 from app.warning import FULL_TEXT  # noqa: E402
+
+
+def faithful_reading(entry) -> ExtractedLabel:
+    """What a perfect reader would return for this queue image."""
+    p = bm.PRINTED[entry.id]
+    printed = bm.printed_warning(p)
+    clear = p.photo != "blurry"
+    return ExtractedLabel(
+        brand_name=p.brand, class_type=p.class_type, alcohol_content=p.abv or None, net_contents=p.net,
+        producer_name_address=p.producer, country_of_origin=p.country or None,
+        government_warning=printed, warning_header_bold=p.header_bold if printed else None,
+        warning_body_bold=False if printed else None, warning_continuous_paragraph=True if printed else None,
+        warning_separate_from_other_text=True if printed else None, warning_legible=clear if printed else None,
+        image_readable=clear,
+    )
 
 
 def simulated_calls():
     calls = []
-    for lab in bm.LABELS:
-        printed = bm.printed_warning(lab)
-        faithful = ExtractedLabel(
-            brand_name=lab.brand, class_type=lab.class_type, alcohol_content=lab.abv, net_contents=lab.net,
-            producer_name_address=lab.producer, country_of_origin=lab.country or None,
-            government_warning=printed, warning_header_bold=lab.header_bold if printed else None,
-        )
-        fixer = faithful.model_copy(update={"government_warning": FULL_TEXT if printed else None})
-        calls.append(bm.Call("faithful", lab, 0, 2.0, faithful, None, {}))
-        calls.append(bm.Call("fixer", lab, 0, 1.0, fixer, None, {}))
+    for entry in load_queue().values():
+        faithful = faithful_reading(entry)
+        fixer = faithful.model_copy(update={"government_warning": FULL_TEXT if faithful.government_warning else None})
+        calls.append(bm.Call("faithful", entry, 0, 2.0, faithful, None, {}))
+        calls.append(bm.Call("fixer", entry, 0, 1.0, fixer, None, {}))
     return calls
 
 
 def by_key(calls):
     grouped = {}
     for c in calls:
-        grouped.setdefault((c.run, c.label.filename), {})[c.model] = c
+        grouped.setdefault((c.run, c.entry.id), {})[c.model] = c
     return grouped
 
 
-def test_perfect_reader_scores_perfectly():
+def test_perfect_reader_gets_every_expected_result():
     st = bm.model_stats([c for c in simulated_calls() if c.model == "faithful"])
-    assert st["correct"] == st["n"] == len(bm.LABELS)
+    assert st["correct"] == st["n"] == len(load_queue())
     assert st["false_pass"] == 0 and st["silent_corrections"] == 0
 
 

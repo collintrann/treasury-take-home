@@ -1,53 +1,105 @@
-"""Data shapes shared across the app.
+"""Data shapes shared across the app. The API models here are the contract the web page mirrors.
 
-Three layers, kept deliberately separate:
-
-* ``ApplicationData``  - what the applicant *claims* (typed in, or a CSV row).
-* ``ExtractedLabel``   - what we *read* off the label image.
-* ``VerificationResult`` - the field-by-field *comparison* of the two.
-
-Keeping "reading" and "judging" apart means the matching rules are plain,
-deterministic, unit-tested Python - the AI model never decides pass/fail.
+Reading and judging stay separate. ``ExtractedLabel`` is what a reader saw on
+the label. ``Finding`` and ``CheckResult`` are what the rules in
+``matching.py``, ``warning.py`` and ``consensus.py`` decided from it.
 """
 
 from __future__ import annotations
 
-from enum import Enum
+import datetime as dt
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+ProductType = Literal["distilled_spirits", "wine", "malt_beverage"]
+Status = Literal["pass", "fail", "needs_review", "not_evaluated"]
+Overall = Literal["pass", "fail", "needs_review"]
 
-class ApplicationData(BaseModel):
-    """Values from the COLA application that the label must match."""
+
+class Application(BaseModel):
+    """What the application says. Blank means the applicant didn't give it."""
 
     brand_name: str = ""
     class_type: str = ""
     alcohol_content: str = ""
     net_contents: str = ""
     producer_name_address: str = ""
-    country_of_origin: str = ""  # only required for imports
+    country_of_origin: str = ""  # blank for domestic products
+
+
+class DiffOp(BaseModel):
+    op: Literal["equal", "missing", "extra"]
+    text: str
+
+
+class Finding(BaseModel):
+    key: str
+    group: Literal["application", "warning"]
+    label: str
+    status: Status
+    expected: Optional[str] = None
+    observed: Optional[str] = None  # as printed, original casing and punctuation kept
+    explanation: str
+    diff: Optional[list[DiffOp]] = None  # warning wording only
+
+
+class CheckResult(BaseModel):
+    overall: Overall
+    image_assessable: bool
+    image_note: str  # ready to show; says to request a clearer image when not assessable
+    findings: list[Finding]
+    elapsed_ms: int
+
+
+class QueueItem(BaseModel):
+    id: str
+    submitted_at: dt.date
+    applicant: str
+    product_type: ProductType
+    brand_name: str
+    image: str  # URL path, e.g. /samples/queue/COLA-26-0001.png
+
+
+class QueueDetail(BaseModel):
+    id: str
+    submitted_at: dt.date
+    applicant: str
+    product_type: ProductType
+    image: str
+    application: Application
+
+
+class QueueEntry(BaseModel):
+    """One row of samples/queue/applications.json. The last two fields are test truth, never served."""
+
+    id: str
+    submitted_at: dt.date
+    applicant: str
+    product_type: ProductType
+    image: str  # file name inside samples/queue/
+    application: Application
+    expected_overall: Overall
+    scenario: str
 
 
 class ExtractedLabel(BaseModel):
-    """Fields transcribed from the label image.
+    """What one reader saw on the label.
 
-    This class doubles as the JSON schema Claude is constrained to, so the
-    descriptions below are effectively part of the prompt.
+    This class is also the JSON schema the reader must answer in, so the
+    descriptions below are part of the prompt.
     """
 
-    brand_name: Optional[str] = Field(
-        None, description="Brand name exactly as printed, preserving capitalization."
-    )
+    brand_name: Optional[str] = Field(None, description="Brand name exactly as printed, preserving capitalization.")
     class_type: Optional[str] = Field(
-        None, description="Class/type designation, e.g. 'Kentucky Straight Bourbon Whiskey'."
+        None, description="Class/type designation, e.g. 'Kentucky Straight Bourbon Whiskey' or 'India Pale Ale'."
     )
     alcohol_content: Optional[str] = Field(
         None, description="Alcohol content statement exactly as printed, e.g. '45% Alc./Vol. (90 Proof)'."
     )
     net_contents: Optional[str] = Field(None, description="Net contents exactly as printed, e.g. '750 mL'.")
     producer_name_address: Optional[str] = Field(
-        None, description="Bottler/producer/importer name and address as printed."
+        None, description="Bottler/producer/importer name and address as printed, including 'Bottled by' or similar."
     )
     country_of_origin: Optional[str] = Field(
         None, description="Country of origin statement if present, e.g. 'Product of Scotland'."
@@ -62,44 +114,35 @@ class ExtractedLabel(BaseModel):
     )
     warning_header_bold: Optional[bool] = Field(
         None,
-        description=(
-            "True if the words 'GOVERNMENT WARNING' are visibly bold/heavier than the "
-            "rest of the warning text; false if not; null if you cannot tell."
-        ),
+        description="True if the 'GOVERNMENT WARNING:' lead-in is visibly bolder than the rest of the warning; "
+        "false if not; null if you cannot tell.",
+    )
+    warning_body_bold: Optional[bool] = Field(
+        None,
+        description="True if the rest of the warning, after the lead-in, is set in bold type; "
+        "false if it is regular weight; null if you cannot tell.",
+    )
+    warning_continuous_paragraph: Optional[bool] = Field(
+        None,
+        description="True if the warning is one continuous paragraph (line wrapping is fine), not split "
+        "into separate paragraphs, bullets or pieces; false if it is split; null if you cannot tell.",
+    )
+    warning_separate_from_other_text: Optional[bool] = Field(
+        None,
+        description="True if the warning stands apart from the other label text and graphics; false if it "
+        "runs into or is crowded by them; null if you cannot tell.",
+    )
+    warning_legible: Optional[bool] = Field(
+        None,
+        description="True if the warning is clearly legible with good contrast against its background; "
+        "false if it is faint, low-contrast or hard to read; null if you cannot tell.",
+    )
+    image_readable: bool = Field(
+        description="True if the photo is clear enough to read all of its text with confidence. False if "
+        "blur, glare, darkness, low resolution or cropping leave any of the text uncertain."
     )
     image_issues: Optional[str] = Field(
         None,
-        description="Short note on anything that made reading hard (glare, angle, blur), or null.",
+        description="One short plain sentence for a reviewer about anything in the photo that made reading "
+        "hard (glare, angle, blur), or null.",
     )
-
-
-class Status(str, Enum):
-    PASS = "pass"  # matches
-    REVIEW = "review"  # probably fine but a human should glance (e.g. case-only difference)
-    FAIL = "fail"  # clear mismatch
-    MISSING = "missing"  # required but not found on the label
-    SKIPPED = "skipped"  # not provided in the application, nothing to compare
-
-
-class FieldResult(BaseModel):
-    field: str  # machine key, e.g. "brand_name"
-    label: str  # human name, e.g. "Brand name"
-    expected: Optional[str] = None
-    found: Optional[str] = None
-    status: Status
-    note: str = ""  # plain-English explanation for the agent
-    diff: Optional[list[dict]] = None  # word diff, only for the warning
-    # Two-reader consensus (AI path only):
-    #   "agreed"   - both readers reached the same verdict
-    #   "disputed" - one reader passed it and the other didn't -> forced to REVIEW
-    #   "single"   - only one reader answered; not double-checked
-    agreement: Optional[Literal["agreed", "disputed", "single"]] = None
-
-
-class VerificationResult(BaseModel):
-    overall: Status
-    fields: list[FieldResult]
-    readers: list[str] = []  # models that answered in time
-    extraction_note: str = ""  # e.g. photo quality
-    elapsed_ms: int
-    filename: Optional[str] = None
