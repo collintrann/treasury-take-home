@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from . import config
 from .extraction import InvalidImageError, extract
 from .extraction.claude_reader import ClaudeExtractionError
-from .matching import verify
+from .consensus import verify_extraction
 from .models import ApplicationData, VerificationResult
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -39,7 +39,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "reader": "claude" if claude else "ocr",
-        "model": config.MODEL if claude else None,
+        "models": [m for m, _ in config.reader_models()] if claude else [],
     }
 
 
@@ -77,15 +77,19 @@ async def verify_label(
     except ClaudeExtractionError as exc:
         raise HTTPException(502, f"Could not read the label: {exc}.") from exc
 
-    overall, fields = verify(
-        application, result.label, from_ocr=result.method == "ocr", low_confidence=result.low_confidence
-    )
+    overall, fields = verify_extraction(application, result)
     elapsed = int((time.perf_counter() - started) * 1000)
-    log.info("verified %s via %s in %d ms -> %s", image.filename, result.method, elapsed, overall.value)
+    readers = [r.model for r in result.readings]
+    disputed = [f.field for f in fields if f.agreement == "disputed"]
+    log.info(
+        "verified %s via %s in %d ms -> %s%s",
+        image.filename, ",".join(readers), elapsed, overall.value, f" (disputed: {','.join(disputed)})" if disputed else "",
+    )
     return VerificationResult(
         overall=overall,
         fields=fields,
         extraction_method=result.method,
+        readers=readers if result.method == "claude" else [],
         extraction_note=result.note,
         elapsed_ms=elapsed,
         filename=image.filename,

@@ -48,6 +48,9 @@ class Label:
     distort: bool = False
     # what the application says (defaults to the label values = compliant)
     app: dict = field(default_factory=dict)
+    # correct overall verdict for a reader that sees the label perfectly
+    # (used by scripts/benchmark.py to score models)
+    expected: str = "pass"
 
 
 LABELS = [
@@ -70,6 +73,7 @@ LABELS = [
         "RIVERBEND", "Straight Rye Whiskey", "50% Alc./Vol. (100 Proof)", "750 mL",
         "Riverbend Distilling, Louisville, KY",
         warning_header="Government Warning:",
+        expected="fail",
     ),
     Label(
         "04_wrong_abv.png",
@@ -77,6 +81,7 @@ LABELS = [
         "COPPER HOLLOW", "Blended Whiskey", "40% Alc./Vol. (80 Proof)", "750 mL",
         "Copper Hollow Spirits, Austin, TX",
         app={"alcohol_content": "45% Alc./Vol. (90 Proof)"},
+        expected="fail",
     ),
     Label(
         "05_altered_warning.png",
@@ -84,6 +89,7 @@ LABELS = [
         "NORTHERN LIGHTS", "Vodka", "40% Alc./Vol.", "750 mL",
         "Northern Lights Distillery, Fargo, ND",
         warning_body=BODY.replace("may cause health problems", "can cause problems"),
+        expected="fail",
     ),
     Label(
         "06_warning_not_bold.png",
@@ -92,6 +98,7 @@ LABELS = [
         "Imported by High Desert Imports, Phoenix, AZ", country="Product of Mexico",
         header_bold=False,
         app={"country_of_origin": "Mexico"},
+        expected="fail",
     ),
     Label(
         "07_angled_glare.png",
@@ -106,6 +113,7 @@ LABELS = [
         "HARBOR LIGHT", "Spiced Rum", "35% Alc./Vol. (70 Proof)", "750 mL",
         "Harbor Light Rum Co., Charleston, SC",
         warning_header=None, warning_body="",
+        expected="fail",
     ),
     Label(
         "09_imported_scotch.png",
@@ -113,6 +121,32 @@ LABELS = [
         "GLEN ARDACH", "Single Malt Scotch Whisky", "43% Alc./Vol.", "70 cl",
         "Imported by Ardach Imports LLC, New York, NY", country="Product of Scotland",
         app={"net_contents": "700 mL", "country_of_origin": "Scotland"},
+    ),
+    # --- Subtle warning typos. These exist to catch a reader that silently
+    # "corrects" what it sees, which would turn a violation into a false PASS.
+    Label(
+        "10_typo_surgeon_generel.png",
+        "Warning misspells 'Surgeon Generel' - should fail; tests whether a reader silently fixes typos",
+        "BLUE HERON", "Dry Gin", "42% Alc./Vol.", "750 mL",
+        "Blue Heron Distillers, Seattle, WA",
+        warning_body=BODY.replace("Surgeon General", "Surgeon Generel"),
+        expected="fail",
+    ),
+    Label(
+        "11_typo_alcohol_beverages.png",
+        "Warning says 'alcohol beverages' instead of 'alcoholic beverages' - should fail",
+        "SILVER CREEK", "Straight Bourbon Whiskey", "46% Alc./Vol. (92 Proof)", "750 mL",
+        "Silver Creek Distilling Co., Frankfort, KY",
+        warning_body=BODY.replace("drink alcoholic beverages", "drink alcohol beverages"),
+        expected="fail",
+    ),
+    Label(
+        "12_missing_comma.png",
+        "Warning drops the comma after 'machinery' - should fail; the subtlest deviation",
+        "IRON GATE", "Dark Rum", "40% Alc./Vol. (80 Proof)", "750 mL",
+        "Iron Gate Rum Works, Miami, FL",
+        warning_body=BODY.replace("machinery, and", "machinery and"),
+        expected="fail",
     ),
 ]
 
@@ -201,7 +235,9 @@ def main() -> None:
             "producer_name_address": label.producer,
             "country_of_origin": label.country,
         } | label.app
-        rows.append({"filename": label.filename, **app, "what_this_tests": label.purpose})
+        rows.append(
+            {"filename": label.filename, **app, "expected_result": label.expected, "what_this_tests": label.purpose}
+        )
         print("wrote", label.filename)
 
     with open(OUT / "batch.csv", "w", newline="", encoding="utf-8") as f:
