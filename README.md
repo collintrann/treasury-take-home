@@ -1,16 +1,16 @@
 # Label Check
 
-Label Check helps TTB agents review alcohol label applications. It checks each label against the application and the Government Health Warning rules.
+AI-Assisted review for alcohol label applications. Checks each label against the application and the Government Health Warning rules.
 
 **Live demo:** https://treasury-take-home-flame.vercel.app
 
-The demo opens on a review queue of 25 sample applications. Open one and the label check runs. Agents don't upload or type anything.
+The demo opens on a review queue of 25 sample applications. Checks run when an application is opened.
 
 ![An application in the review queue with a misspelled government warning flagged](docs/screenshot.png)
 
 ## Setup
 
-You need Python 3.11 or newer, Node.js 20 or newer, and an Anthropic API key.
+Requirements: Python 3.11+, Node.js 20+, Anthropic API key.
 
 ### Backend
 
