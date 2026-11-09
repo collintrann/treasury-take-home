@@ -168,35 +168,7 @@ def test_rejects_oversized_upload(fake_claude, monkeypatch):
     assert res.status_code == 413
 
 
-# -------------------------------------------------------------------- batch
-
-def test_parse_manifest_handles_quoted_commas_and_aliases():
-    csv_text = 'File,Brand,ABV,Producer\nlabel1.jpg,Acme,40%,"Acme Co., Austin, TX"\n,,,\n'
-    res = client.post("/api/parse-manifest", files={"manifest": ("m.csv", csv_text.encode("utf-8-sig"), "text/csv")})
-    assert res.status_code == 200, res.text
-    rows = res.json()["rows"]
-    assert rows == [
-        {
-            "filename": "label1.jpg",
-            "application": {
-                "brand_name": "Acme",
-                "class_type": "",
-                "alcohol_content": "40%",
-                "net_contents": "",
-                "producer_name_address": "Acme Co., Austin, TX",
-                "country_of_origin": "",
-            },
-        }
-    ]
-
-
-def test_parse_manifest_requires_filename_column():
-    res = client.post("/api/parse-manifest", files={"manifest": ("m.csv", b"brand\nAcme\n", "text/csv")})
-    assert res.status_code == 400
-
-
-def test_examples_and_samples():
-    assert len(client.get("/api/examples").json()) == 12
+def test_samples_and_health():
     assert client.get("/samples/01_old_tom_compliant.png").status_code == 200
     assert client.get("/api/health").json()["status"] == "ok"
 
@@ -242,7 +214,7 @@ def test_ui_source_never_mentions_internals():
 
 def test_checker_secret_is_required_when_configured(monkeypatch):
     monkeypatch.setattr(config, "CHECKER_SECRET", "s3cret")
-    assert client.get("/api/examples").status_code == 401
-    assert client.get("/api/examples", headers={"X-Checker-Secret": "wrong"}).status_code == 401
-    assert client.get("/api/examples", headers={"X-Checker-Secret": "s3cret"}).status_code == 200
+    assert client.post("/api/verify").status_code == 401
+    assert client.post("/api/verify", headers={"X-Checker-Secret": "wrong"}).status_code == 401
+    assert client.post("/api/verify", headers={"X-Checker-Secret": "s3cret"}).status_code != 401
     assert client.get("/api/health").status_code == 200

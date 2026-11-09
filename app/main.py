@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import csv
-import io
 import logging
 import secrets
 import time
@@ -23,7 +21,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("label-check")
 
 SAMPLES_DIR = Path(__file__).parent.parent / "samples"
-APP_FIELDS = list(ApplicationData.model_fields)
 
 app = FastAPI(title="Label Check", docs_url="/api/docs", redoc_url=None)
 
@@ -102,81 +99,6 @@ async def verify_label(
         elapsed_ms=elapsed,
         filename=image.filename,
     )
-
-
-def _header_key(name: str) -> str:
-    return "_".join(name.strip().lower().replace("/", " ").split())
-
-
-# Friendly CSV header spellings -> internal field names.
-_HEADER_ALIASES = {
-    "file": "filename",
-    "image": "filename",
-    "brand": "brand_name",
-    "class": "class_type",
-    "abv": "alcohol_content",
-    "alcohol": "alcohol_content",
-    "net": "net_contents",
-    "volume": "net_contents",
-    "producer": "producer_name_address",
-    "bottler": "producer_name_address",
-    "country": "country_of_origin",
-}
-
-
-@app.post("/api/parse-manifest")
-async def parse_manifest(manifest: UploadFile = File(...)) -> dict:
-    """Parse the batch CSV (one row per label) into application records.
-
-    Parsed server-side because Python's csv module copes with quoted commas
-    in addresses, BOMs from Excel, etc. - fiddly to get right in browser JS.
-    """
-    raw = await manifest.read(2 * 1024 * 1024)
-    try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        text = raw.decode("latin-1")
-
-    reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames:
-        raise HTTPException(400, "The CSV file is empty.")
-    keys = {h: _HEADER_ALIASES.get(_header_key(h), _header_key(h)) for h in reader.fieldnames}
-    if "filename" not in keys.values():
-        raise HTTPException(400, "The CSV needs a 'filename' column naming each label image.")
-
-    rows, errors = [], []
-    for line_no, raw_row in enumerate(reader, start=2):
-        row = {keys[k]: (v or "").strip() for k, v in raw_row.items() if k in keys}
-        if not row.get("filename"):
-            if any(row.values()):
-                errors.append(f"Row {line_no}: missing filename.")
-            continue
-        rows.append(
-            {
-                "filename": row["filename"],
-                "application": {f: row.get(f, "") for f in APP_FIELDS},
-            }
-        )
-    if not rows:
-        raise HTTPException(400, "No label rows found in the CSV.")
-    return {"rows": rows, "errors": errors}
-
-
-@app.get("/api/examples")
-def examples() -> list[dict]:
-    """The bundled sample labels, so evaluators can try the app in one click."""
-    path = SAMPLES_DIR / "batch.csv"
-    if not path.exists():
-        return []
-    with path.open(newline="", encoding="utf-8") as f:
-        return [
-            {
-                "filename": row["filename"],
-                "what_this_tests": row.get("what_this_tests", ""),
-                "application": {k: row.get(k, "") for k in APP_FIELDS},
-            }
-            for row in csv.DictReader(f)
-        ]
 
 
 if SAMPLES_DIR.exists():
