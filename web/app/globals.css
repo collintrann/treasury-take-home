@@ -1,0 +1,123 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-atkinson), system-ui, sans-serif;
+  --font-heading: var(--font-atkinson), system-ui, sans-serif;
+  --color-pass: var(--pass);
+  --color-pass-bg: var(--pass-bg);
+  --color-review: var(--review);
+  --color-review-bg: var(--review-bg);
+  --color-fail: var(--fail);
+  --color-fail-bg: var(--fail-bg);
+  --color-skip: var(--skip);
+  --color-skip-bg: var(--skip-bg);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+
+/* High contrast for agents of every comfort level with technology. Status
+   colors always sit next to an icon and a word, never alone. */
+:root {
+  --background: #f3f5f8;
+  --foreground: #12171d;
+  --card: #ffffff;
+  --card-foreground: #12171d;
+  --popover: #ffffff;
+  --popover-foreground: #12171d;
+  --primary: #1d4f91;
+  --primary-foreground: #ffffff;
+  --secondary: #e6ebf2;
+  --secondary-foreground: #12171d;
+  --muted: #e9edf2;
+  --muted-foreground: #4a5361;
+  --accent: #e1e9f5;
+  --accent-foreground: #12171d;
+  --destructive: #9f1419;
+  --border: #c3cbd6;
+  --input: #8a94a3;
+  --ring: #1d4f91;
+  --radius: 0.75rem;
+  --pass: #135c2c;
+  --pass-bg: #e0f2e6;
+  --review: #744a00;
+  --review-bg: #fdefc9;
+  --fail: #9f1419;
+  --fail-bg: #fbe3e3;
+  --skip: #4a5361;
+  --skip-bg: #e9edf2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #101317;
+    --foreground: #eef1f5;
+    --card: #1a1f26;
+    --card-foreground: #eef1f5;
+    --popover: #1a1f26;
+    --popover-foreground: #eef1f5;
+    --primary: #8ab8ff;
+    --primary-foreground: #0b1526;
+    --secondary: #272e37;
+    --secondary-foreground: #eef1f5;
+    --muted: #232a32;
+    --muted-foreground: #b5bec9;
+    --accent: #243246;
+    --accent-foreground: #eef1f5;
+    --destructive: #ff9a9a;
+    --border: #3b444f;
+    --input: #6b7684;
+    --ring: #8ab8ff;
+    --pass: #8ae2a9;
+    --pass-bg: #12301e;
+    --review: #f6cd70;
+    --review-bg: #342910;
+    --fail: #ff9f9f;
+    --fail-bg: #3a1718;
+    --skip: #b5bec9;
+    --skip-bg: #232a32;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+    font-size: 18px;
+  }
+}
