@@ -1,103 +1,108 @@
 # Label Check
 
-A prototype that checks an alcohol label photo against its TTB application. It reads the label, compares each field to the application, and checks the Government Health Warning word for word.
+A web application that helps TTB agents verify alcohol labels against their application and the Government Health Warning requirements.
 
-**Deployed URL:** not deployed yet.
+**Live demo:** https://treasury-take-home-flame.vercel.app
 
-![Label Check screenshot](docs/screenshot.png)
+Pick a label from "Try an example" and click "Check label".
 
-## Run it
+![Label Check showing a misspelled warning flagged as a problem](docs/screenshot.png)
 
-Needs Python 3.11 or newer, Node.js 20 or newer, and an Anthropic API key.
+## Setup
+
+Requires Python 3.11+, Node.js 20+, and an Anthropic API key.
+
+### Backend (checking service)
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env              # then add your ANTHROPIC_API_KEY
+cp .env.example .env
+```
+
+Add your `ANTHROPIC_API_KEY` to `.env`, then start the service on port 8000:
+
+```bash
 uvicorn app.main:app --reload --env-file .env
 ```
 
-That starts the checking service on port 8000. Then start the web page:
+### Frontend
+
+In a separate terminal:
 
 ```bash
 cd web
 npm install
-cp .env.example .env.local        # CHECKER_URL=http://localhost:8000
+cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000 and pick a label from "Try an example".
+`.env.local` already points `CHECKER_URL` at `http://localhost:8000`. Open http://localhost:3000.
 
-The page is Next.js with shadcn components. Its server forwards requests to the checking service and adds the shared secret, so the browser never calls the service directly. Photos are shrunk in the browser to stay under Vercel's 4.5 MB upload limit. The application fields are defined once, in `web/lib/fields.ts`.
-
-Run the tests with `pytest`. They need no API key or network.
-
-The checking service also runs with Docker:
+### Tests
 
 ```bash
-docker build -t label-check .
-docker run -p 8000:8000 --env-file .env label-check
+pytest                              # backend: matching rules, warning check, API; no key or network needed
+cd web && npm run lint && npm run build
 ```
-
-## Using it
-
-- **Check one label.** Upload a photo, type what the application says, and click "Check label". Blank fields are skipped. The warning is always checked.
-- **Check many labels.** Upload a CSV with one row per label (a `filename` column plus any application fields) and select the images. Results appear as each label finishes.
-
-Each field gets one of three results:
-
-| Result | Meaning |
-|---|---|
-| ✔ Match | Same as the application, or differs only in capitalization or punctuation |
-| ⚠ Check | Probably fine, but the agent should look |
-| ✖ Mismatch | Different from the application, or missing from the label |
 
 ## How it works
 
-- Claude reads the label into fixed fields. Plain, tested Python rules decide each result, so the AI never decides pass or fail.
-- Two different models read each label at once. A field only passes if both agree, which catches a model quietly fixing a typo in the warning.
-- Capitalization differences pass. Numbers are compared as numbers, so 70 cl matches 700 mL. The warning must match word for word, with "GOVERNMENT WARNING:" in capitals and bold.
+1. The agent uploads a label image and enters what the application says.
+2. Two Claude vision models (Opus 5.5 and Haiku 5.5) read the label at the same time and transcribe its fields into a fixed format. They only transcribe; they never decide whether anything passes.
+3. Plain Python rules compare each reading to the application and give every field a result.
+4. The two sets of results are compared field by field. A field passes only if both readings pass it. If they disagree, it goes to the agent for review.
+5. The page shows, for each field, what the application says, what was found on the label, and a short explanation.
 
-The reasoning and trade-offs are in [docs/DESIGN.md](docs/DESIGN.md). The requirements are in [REQUIREMENTS.md](REQUIREMENTS.md).
+The rules:
 
-## Benchmark
+- **Government Health Warning:** must match the regulation word for word, punctuation included, with "GOVERNMENT WARNING:" in capital letters and bold. Differences are shown word by word.
+- **Brand, class/type, producer, country:** pass when identical or differing only in capitalization or punctuation ("STONE'S THROW" matches "Stone's Throw"). Near-misses go to review.
+- **Alcohol content and net contents:** compared as numbers, so 90 proof matches 45%, and 70 cl matches 700 mL.
 
-```bash
-python scripts/benchmark.py --runs 3
-```
+## Design decisions
 
-Runs each model on the 12 sample labels and reports speed, accuracy, and how often a model silently fixes a typo. It makes real, billed API calls and writes `docs/benchmark-results.md`.
+- **The AI reads, code decides.** Every result comes from a rule with a test, so results are explainable and consistent, and a prompt change can't quietly change what passes.
+- **Two independent readings.** The most dangerous error is approving a bad label. The likeliest cause is a model quietly correcting a typo in the warning while reading it, which makes the result look perfect. A second, different model rarely makes the same correction, so a disagreement catches it.
+- **Human review over guessing.** Unclear or conflicting results are marked for review rather than passed or failed automatically. The tool supports the agent's decision; it doesn't make it.
+- **Plain language.** Agents never see technical terms. Notes say what to do, such as "Please check the label".
+- **Standalone.** No connection to TTB's internal systems or COLA.
 
-## Code
+More detail, including the trade-offs, is in [docs/DESIGN.md](docs/DESIGN.md). Requirements are in [REQUIREMENTS.md](REQUIREMENTS.md).
 
-| Path | Contents |
-|---|---|
-| `app/main.py` | API routes |
-| `app/extraction/` | Reads the label with two models under a time limit |
-| `app/matching.py`, `app/warning.py` | The rules that decide each result |
-| `app/consensus.py` | Combines the two readings |
-| `web/` | The web page (Next.js) |
-| `samples/` | 12 generated test labels and `batch.csv` |
-| `scripts/` | Sample generator and benchmark |
-| `tests/` | Unit and API tests, with stand-ins for the models |
+## Performance
 
-## Settings
+Measured on the live demo: 3.0 to 3.7 seconds per label (server time), within the brief's target of about 5 seconds. The two readings run in parallel, so a check takes about as long as the slower one.
 
-Set in `.env`. Only the API key is required.
+The first request with a new output format takes about 10 seconds longer, because the API prepares that format once and then caches it.
+
+## Tools
+
+- **Frontend:** Next.js, React, Tailwind CSS, shadcn/ui, Lucide icons
+- **Backend:** Python, FastAPI, Pillow
+- **AI:** Anthropic Claude (Opus 5.5 and Haiku 5.5)
+- **Testing:** pytest, Playwright (manual end-to-end runs)
+- **Deployment:** Vercel (frontend), DigitalOcean App Platform with Docker (backend)
+
+## Configuration
+
+Backend (`.env`):
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | none | Required |
+| `CHECKER_SECRET` | none | When set, every API call must send it in the `X-Checker-Secret` header |
 | `PRIMARY_MODEL` | `claude-opus-5-5` | First reader |
 | `SECONDARY_MODEL` | `claude-haiku-5-5` | Second reader; empty for one reader only |
-| `CLAUDE_EFFORT` | `low` | Thinking effort |
-| `READ_DEADLINE_SECONDS` | `4.5` | Readers still running after this are dropped |
-| `MAX_CONCURRENCY` | `8` | Labels checked at once per server |
-| `MAX_UPLOAD_MB` | `15` | Upload size limit |
-| `CHECKER_SECRET` | none | When set, API calls must send it in the `X-Checker-Secret` header |
+| `READ_DEADLINE_SECONDS` | `4.5` | Readings still running after this are dropped |
 
-## Limitations
+Frontend (`web/.env.local`): `CHECKER_URL` (where the backend runs) and `CHECKER_SECRET` (the same value as the backend). The browser only talks to the Next.js server, which adds the secret, so the backend can't be called directly.
 
-- Not yet run against the real API, so speed and accuracy are unmeasured.
-- Test labels are generated, not real photos.
-- No COLA integration. Nothing is stored.
+## Assumptions and limitations
+
+- The tool assists reviewers. It does not make approval decisions.
+- Some requirements can't be verified from an image, such as the warning's minimum type size, because a photo has no known scale.
+- Test labels are generated (`samples/`), covering one case each from the stakeholder interviews. Accuracy on real label submissions hasn't been measured yet.
+- Batch checking works from a CSV plus images in the browser. There is no server-side job queue, so closing the tab stops a batch.
+- Label images are sent to Anthropic to be read and are not stored. Running on a network that blocks outside services needs only one allowed address, because the browser talks only to this site. In a government environment, the model would need to come from an approved provider, such as Claude through the agency's own cloud, or be hosted locally.
