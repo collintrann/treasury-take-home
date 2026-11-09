@@ -53,43 +53,12 @@ Every result is one of:
 
 ## Approach
 
-**Every decision, with the options considered and the trade-offs, is in
-[docs/DESIGN.md](docs/DESIGN.md).** This is the short version.
+- Claude reads the label into fixed fields. Plain, tested Python rules decide each result, so the AI never decides pass or fail.
+- Two different models read each label at once. A field only passes if both agree, which catches a model quietly fixing a typo in the warning.
+- If the AI can't be reached, Tesseract reads the label on the server instead.
+- Capitalization differences pass ("STONE'S THROW" matches "Stone's Throw"). Numbers are compared as numbers (70 cl matches 700 mL). The warning must match word for word, with "GOVERNMENT WARNING:" in capitals and bold.
 
-```
-                ┌─► primary AI reader   (claude-opus-5-5)  ─┐  both in parallel,
- label image ───┤                                           ├─ 4.5 s deadline
-                └─► secondary AI reader (claude-haiku-5-5) ─┘
-                          │ nobody answered / network blocked
-                          └─► offline Tesseract OCR (deskewed)
-                                        │
-            matching rules (plain, tested Python) run on each reading
-                                        │
-          consensus: a field can only PASS if every reader passed it
-                                        │
-                   verdict per field: PASS · REVIEW · FAIL
-```
-
-1. **The AI reads; code judges.** Models only transcribe into a fixed schema.
-   Pass/fail comes from deterministic, unit-tested rules, so verdicts are
-   explainable and a prompt change can't silently change policy. ([D2](docs/DESIGN.md#d2-the-ai-reads-plain-code-judges))
-2. **Two independent AI readers ("double-keying").** The dangerous error is a
-   *false PASS*, most likely caused by a model silently "fixing" a typo in the
-   warning. One reader can't catch its own silent fix, but a second, *different*
-   model rarely makes the same one. When they disagree, the field goes to
-   REVIEW, shown to the agent as a plain "please check" with the word highlighted. Cost isn't the driver: at about 2¢ a label,
-   150k labels a year is a few thousand dollars. ([D7](docs/DESIGN.md#d7-model-routing-two-independent-readers-double-keying), [D8](docs/DESIGN.md#d8-consensus-rules))
-3. **Hybrid AI + offline OCR.** This covers Marcus's firewall concern: if the API
-   is blocked, Tesseract runs locally, and the UI says so. OCR results are graded
-   more cautiously, because OCR can't tell its misreads from real typos or see
-   bold type. ([D4](docs/DESIGN.md#d4-hybrid-extraction-ai-first-offline-ocr-fallback), [D5](docs/DESIGN.md#d5-ocr-results-are-graded-more-cautiously))
-4. **5-second budget.** Readers run in parallel under a hard deadline, with low
-   thinking effort and downscaled images. **Real API latency is not yet measured**:
-   run the benchmark. ([D10](docs/DESIGN.md#d10-the-5-second-budget))
-5. **Judgment, not just pattern matching.** `STONE'S THROW` = `Stone's Throw`
-   (passes with a note), numbers are compared as numbers (`70 cl` = `700 mL`), and
-   the warning must match word-for-word, with a capitalized colon lead-in in bold.
-   ([D14](docs/DESIGN.md#d14-text-field-matching)–[D16](docs/DESIGN.md#d16-the-government-warning-check))
+The reasoning and trade-offs are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ### Benchmark
 

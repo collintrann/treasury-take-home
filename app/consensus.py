@@ -12,8 +12,7 @@ The safety property this module guarantees:
 The dangerous error in label review is a false PASS (a bad label approved).
 The likeliest cause is a model silently "fixing" a typo while transcribing.
 Two different models rarely make the same silent fix, so any pass/not-pass
-split goes to a human. See docs/DESIGN.md, decision D9, for the full rules
-and the alternatives considered.
+split goes to a human. See docs/DESIGN.md.
 """
 
 from __future__ import annotations
