@@ -98,7 +98,8 @@ def test_queue_images_are_served():
     item = client.get("/api/queue").json()[0]
     res = client.get(item["image"])
     assert res.status_code == 200 and res.headers["content-type"] == "image/png"
-    assert client.get("/samples/../app/config.py").status_code == 404
+    assert client.get("/samples/%2e%2e/app/config.py").status_code == 404
+    assert client.get("/samples/queue/%2e%2e/%2e%2e/app/config.py").status_code == 404
 
 
 def test_queue_detail_has_the_application():
@@ -347,3 +348,20 @@ def test_startup_reads_one_label_with_each_model(monkeypatch):
             time.sleep(0.05)  # the warm-up runs in the background on the server's event loop
     assert [m for m, _ in calls] == [m for m, _ in config.reader_models()]
     assert all(t == main_module.WARM_UP_TIMEOUT_SECONDS for _, t in calls)
+
+
+def test_checker_secret_edge_cases(monkeypatch):
+    monkeypatch.setattr(config, "CHECKER_SECRET", "s3cret")
+    res = client.get("/api/queue", headers={"X-Checker-Secret": "caf\xe9".encode("latin-1")})
+    assert res.status_code == 401 and res.json() == {"detail": "Not allowed."}
+    assert client.get("/api/openapi.json").status_code == 401
+    assert client.get("/openapi.json").status_code == 404
+
+
+def test_missing_queue_image_is_a_clear_404(fake_readers, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "QUEUE_DIR", main_module.QUEUE_DIR / "does-not-exist")
+    first = client.get("/api/queue").json()[0]["id"]
+    res = client.post(f"/api/queue/{first}/check")
+    assert res.status_code == 404 and "find" in res.json()["detail"]

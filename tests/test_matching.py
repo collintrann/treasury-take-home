@@ -148,7 +148,7 @@ def test_matching_spirits_label_passes_every_field_but_country():
         "producer_name_address": "pass",
         "country_of_origin": "not_evaluated",
     }
-    assert by["country_of_origin"].explanation == "Not an import."
+    assert by["country_of_origin"].explanation == "No country of origin in the application. It is needed only for imports."
 
 
 def test_observed_keeps_the_label_text_as_printed():

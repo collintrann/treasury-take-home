@@ -193,7 +193,11 @@ def compare_volume(expected: str, found: str) -> tuple[Status, str]:
 def _not_evaluated_reason(key: str, product_type: ProductType, expected: str, found: str | None) -> str | None:
     """Why this field isn't checked for this product, or None when it is."""
     if not normalize(expected):
-        return "Not an import." if key == "country_of_origin" else "Not provided in the application."
+        return (
+            "No country of origin in the application. It is needed only for imports."
+            if key == "country_of_origin"
+            else "Not provided in the application."
+        )
     if key == "alcohol_content" and not found:
         if product_type == "malt_beverage":
             return "Not required for malt beverages."

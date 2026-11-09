@@ -61,7 +61,9 @@ async def lifespan(_: FastAPI):
         task.cancel()
 
 
-app = FastAPI(title="Label Check", docs_url="/api/docs", redoc_url=None, lifespan=lifespan)
+app = FastAPI(
+    title="Label Check", docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None, lifespan=lifespan
+)
 
 # Caps simultaneous checks so a burst of requests can't exhaust API rate
 # limits or the box's CPU. Extra requests wait their turn.
@@ -73,7 +75,7 @@ async def require_checker_secret(request: Request, call_next):
     path = request.url.path
     if config.CHECKER_SECRET and path.startswith("/api/") and path != "/api/health":
         given = request.headers.get("X-Checker-Secret", "")
-        if not secrets.compare_digest(given, config.CHECKER_SECRET):
+        if not secrets.compare_digest(given.encode(), config.CHECKER_SECRET.encode()):
             return JSONResponse({"detail": "Not allowed."}, status_code=401)
     return await call_next(request)
 
@@ -168,7 +170,11 @@ def queue_detail(application_id: str) -> QueueDetail:
 @app.post("/api/queue/{application_id}/check", response_model=CheckResult)
 async def check_queued(application_id: str) -> CheckResult:
     entry = _queued(application_id)
-    data = (QUEUE_DIR / entry.image).read_bytes()
+    try:
+        data = (QUEUE_DIR / entry.image).read_bytes()
+    except OSError as exc:
+        log.error("queue image missing for %s: %s", entry.id, exc)
+        raise HTTPException(404, "We couldn't find the label for that application.") from exc
     return await run_check(data, entry.product_type, entry.application, entry.id)
 
 
