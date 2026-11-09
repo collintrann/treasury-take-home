@@ -197,3 +197,50 @@ def test_low_confidence_fail_becomes_review():
     overall, fields = verify(APP, label, from_ocr=True, low_confidence=True)
     abv = next(f for f in fields if f.field == "alcohol_content")
     assert abv.status == Status.REVIEW and "hard to read" in abv.note
+
+
+# ------------------------------------------------- audit regressions (M1, M6)
+
+def test_warning_header_wrapped_across_lines_passes():
+    assert check_warning("GOVERNMENT\nWARNING: " + BODY, header_bold=True)[0] == "pass"
+    assert check_warning("GOVERNMENT  WARNING: " + BODY, header_bold=True)[0] == "pass"
+
+
+def test_extra_words_around_class_type_are_not_a_pass():
+    assert compare_text("class_type", "Rum", "Spiced Rum Liqueur").status == Status.REVIEW
+
+
+def test_brand_that_is_only_part_of_the_label_brand_is_not_a_pass():
+    assert compare_text("brand_name", "Old Tom", "OLD TOM DISTILLERY").status == Status.REVIEW
+
+
+def test_country_inside_a_different_place_name_is_not_a_pass():
+    assert compare_text("country_of_origin", "Mexico", "Product of New Mexico").status == Status.REVIEW
+
+
+def test_known_label_phrasing_still_passes():
+    assert compare_text("country_of_origin", "Scotland", "Product of Scotland").status == Status.PASS
+    assert compare_text("country_of_origin", "France", "Made in France").status == Status.PASS
+    assert compare_text(
+        "producer_name_address", "Old Tom Distillery, Bardstown, KY", "Distilled and bottled by Old Tom Distillery, Bardstown, KY"
+    ).status == Status.PASS
+
+
+def test_punctuation_only_application_value_is_skipped():
+    assert compare_text("brand_name", "-", "Anything").status == Status.SKIPPED
+
+
+def test_thousands_separator_in_volume():
+    assert parse_volume_ml("1,000 mL") == 1000
+    assert compare_volume("1 L", "1,000 mL").status == Status.PASS
+
+
+def test_us_customary_volume_units():
+    assert round(parse_volume_ml("1 PINT")) == 473
+    assert round(parse_volume_ml("1 Quart")) == 946
+    assert round(parse_volume_ml("1 gallon")) == 3785
+
+
+def test_abv_prefers_the_alcohol_statement_over_other_percentages():
+    assert parse_abv("100% Blue Agave 40% Alc/Vol") == (40.0, None)
+    assert parse_abv("100% Blue Agave · ALC. 40% BY VOL.") == (40.0, None)

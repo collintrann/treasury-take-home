@@ -18,11 +18,26 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "samples"
 
-FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
-SERIF_BOLD = FONT_DIR / "DejaVuSerif-Bold.ttf"
-SERIF = FONT_DIR / "DejaVuSerif.ttf"
-SANS = FONT_DIR / "DejaVuSans.ttf"
-SANS_BOLD = FONT_DIR / "DejaVuSans-Bold.ttf"
+# DejaVu on Linux, Supplemental fonts on macOS. Images differ slightly between them.
+_FONT_CANDIDATES = {
+    "serif_bold": ["/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/System/Library/Fonts/Supplemental/Georgia Bold.ttf"],
+    "serif": ["/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/System/Library/Fonts/Supplemental/Georgia.ttf"],
+    "sans": ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf"],
+    "sans_bold": ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"],
+}
+
+
+def _find_font(kind: str) -> Path:
+    for candidate in _FONT_CANDIDATES[kind]:
+        if Path(candidate).exists():
+            return Path(candidate)
+    raise SystemExit(f"No {kind} font found. Install DejaVu fonts (apt-get install fonts-dejavu-core).")
+
+
+SERIF_BOLD = _find_font("serif_bold")
+SERIF = _find_font("serif")
+SANS = _find_font("sans")
+SANS_BOLD = _find_font("sans_bold")
 
 BODY = (
     "(1) According to the Surgeon General, women should not drink alcoholic beverages during "

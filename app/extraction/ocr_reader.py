@@ -21,7 +21,7 @@ import re
 import pytesseract
 from PIL import Image, ImageFilter, ImageOps
 
-from ..matching import _ABV_RE, _PROOF_RE, _VOL_RE, normalize
+from ..matching import _ABV_RE, _ABV_STATEMENT_RE, _PROOF_RE, _VOL_RE, normalize
 from ..models import ApplicationData, ExtractedLabel
 
 # Tesseract parallelises each call with OpenMP, one thread per core. With several
@@ -131,7 +131,7 @@ def _find_warning(text: str) -> str | None:
 
 
 def parse_ocr_text(text: str, app: ApplicationData) -> ExtractedLabel:
-    alcohol = _find_line(_ABV_RE, text) or _find_line(_PROOF_RE, text)
+    alcohol = _find_line(_ABV_STATEMENT_RE, text) or _find_line(_ABV_RE, text) or _find_line(_PROOF_RE, text)
     volume = _VOL_RE.search(text)
     return ExtractedLabel(
         brand_name=find_best_window(app.brand_name, text),

@@ -104,7 +104,7 @@ def check_warning(
         problems.append("The 'GOVERNMENT WARNING:' lead-in is missing.")
         body_found = found
     else:
-        header_text = m.group(0)
+        header_text = " ".join(m.group(0).split())  # a line break inside the lead-in is layout
         if not header_text.startswith("GOVERNMENT WARNING"):
             problems.append(
                 f"Lead-in is '{header_text.strip()}' - it must be 'GOVERNMENT WARNING:' in all capital letters."

@@ -53,11 +53,26 @@ def similarity(a: str, b: str) -> float:
     return difflib.SequenceMatcher(a=normalize(a), b=normalize(b), autojunk=False).ratio()
 
 
+# Standard label phrasing that wraps a value. Stripped from both sides before
+# comparing, so "Product of Scotland" matches "Scotland" but "Product of New
+# Mexico" does not match "Mexico".
+_ROLE = r"(?:distilled|bottled|produced|brewed|blended|made|imported|vinted|cellared|packed)"
+_LABEL_PHRASING = {
+    "country_of_origin": re.compile(r"^(?:product of|produce of|made in|imported from) "),
+    "producer_name_address": re.compile(rf"^{_ROLE}(?: and {_ROLE})* (?:by|for) "),
+}
+
+
+def _strip_phrasing(key: str, normalized: str) -> str:
+    pattern = _LABEL_PHRASING.get(key)
+    return pattern.sub("", normalized) if pattern else normalized
+
+
 def compare_text(key: str, expected: str, found: str | None) -> FieldResult:
     label = FIELD_LABELS[key]
     base = dict(field=key, label=label, expected=expected or None, found=found)
 
-    if not expected.strip():
+    if not normalize(expected):
         return FieldResult(**base, status=Status.SKIPPED, note="Not provided in the application.")
     if not found or not found.strip():
         return FieldResult(**base, status=Status.MISSING, note=f"{label} was not found on the label.")
@@ -71,10 +86,8 @@ def compare_text(key: str, expected: str, found: str | None) -> FieldResult:
             **base, status=Status.PASS, note="Matches (differs only in capitalization or punctuation)."
         )
 
-    # Label text often wraps the value in extra words, e.g. "Product of Scotland"
-    # for "Scotland" or "Bottled by Acme Distilling, Louisville KY" for the producer.
-    if re.search(rf"\b{re.escape(n_exp)}\b", n_found):
-        return FieldResult(**base, status=Status.PASS, note="Found on the label (with surrounding wording).")
+    if _strip_phrasing(key, n_exp) == _strip_phrasing(key, n_found):
+        return FieldResult(**base, status=Status.PASS, note="Matches (with standard label wording around it).")
 
     ratio = similarity(expected, found)
     if ratio >= REVIEW_SIMILARITY:
@@ -83,9 +96,13 @@ def compare_text(key: str, expected: str, found: str | None) -> FieldResult:
             status=Status.REVIEW,
             note=f"Very close but not identical ({ratio:.0%} similar) - please check by eye.",
         )
-    if n_found in n_exp:
+    if re.search(rf"\b{re.escape(n_found)}\b", n_exp):
         return FieldResult(
             **base, status=Status.REVIEW, note="Label shows only part of the application value - please check."
+        )
+    if re.search(rf"\b{re.escape(n_exp)}\b", n_found):
+        return FieldResult(
+            **base, status=Status.REVIEW, note="Label has extra words around the application value - please check."
         )
     return FieldResult(**base, status=Status.FAIL, note="Does not match the application.")
 
@@ -93,18 +110,31 @@ def compare_text(key: str, expected: str, found: str | None) -> FieldResult:
 # ------------------------------------------------------------------------ alcohol
 
 _ABV_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*%")
+# A percentage tied to alcohol wording, so "100% Blue Agave" isn't read as the ABV.
+_ABV_STATEMENT_RE = re.compile(
+    r"(?:alc(?:ohol)?\.?|abv)[^%\d]{0,15}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:alc|abv|alcohol|by vol|vol)",
+    re.IGNORECASE,
+)
 _PROOF_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:°\s*)?proof", re.IGNORECASE)
 
 
 def _num(s: str) -> float:
+    """Parse "1,000" as one thousand and "12,5" (European decimal) as twelve and a half."""
+    if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", s):
+        return float(s.replace(",", ""))
     return float(s.replace(",", "."))
 
 
 def parse_abv(text: str) -> tuple[float | None, float | None]:
     """Return (abv_percent, proof) found in a statement; either may be None."""
-    abv = _ABV_RE.search(text)
+    statement = _ABV_STATEMENT_RE.search(text)
+    if statement:
+        abv_text = statement.group(1) or statement.group(2)
+    else:
+        bare = _ABV_RE.search(text)
+        abv_text = bare.group(1) if bare else None
     proof = _PROOF_RE.search(text)
-    return (_num(abv.group(1)) if abv else None, _num(proof.group(1)) if proof else None)
+    return (_num(abv_text) if abv_text else None, _num(proof.group(1)) if proof else None)
 
 
 def compare_alcohol(expected: str, found: str | None) -> FieldResult:
@@ -156,9 +186,15 @@ _UNITS = {
     "fl. oz": 29.5735,
     "fluid ounce": 29.5735,
     "oz": 29.5735,
+    "pint": 473.176,
+    "pt": 473.176,
+    "quart": 946.353,
+    "qt": 946.353,
+    "gallon": 3785.41,
+    "gal": 3785.41,
 }
 _VOL_RE = re.compile(
-    r"(\d+(?:[.,]\d+)?)\s*(" + "|".join(sorted((re.escape(u) for u in _UNITS), key=len, reverse=True)) + r")s?\b",
+    r"(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)\s*(" + "|".join(sorted((re.escape(u) for u in _UNITS), key=len, reverse=True)) + r")s?\b",
     re.IGNORECASE,
 )
 
