@@ -43,10 +43,6 @@ from dotenv import load_dotenv  # noqa: E402
 load_dotenv(ROOT / ".env")
 
 from app import config  # noqa: E402
-
-# Measure true model latency, not our deadline: give calls plenty of time.
-config.READ_DEADLINE_SECONDS = 120
-
 from app.consensus import decide  # noqa: E402
 from app.extraction import Reading  # noqa: E402
 from app.extraction.claude_reader import extract_with_claude  # noqa: E402
@@ -220,6 +216,8 @@ async def main() -> None:
     args = ap.parse_args()
 
     config.EFFORT = args.effort
+    # Measure true model latency, not our deadline: give calls plenty of time.
+    config.READ_DEADLINE_SECONDS = 120
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     entries = scored_entries()
     jpegs = {e.id: [to_upload_jpeg(load_image((QUEUE_DIR / name).read_bytes())) for name in e.images] for e in entries}

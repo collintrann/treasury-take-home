@@ -1,0 +1,275 @@
+{
+ "about": "Every Fail on an approved label in the first run, opened and classified by hand, and the first run's overall results.",
+ "first_run_overall": {
+  "distilled_spirits": {
+   "pass": 11,
+   "needs_review": 18,
+   "fail": 11
+  },
+  "wine": {
+   "fail": 12,
+   "needs_review": 18,
+   "pass": 10
+  },
+  "malt_beverage": {
+   "pass": 8,
+   "needs_review": 21,
+   "fail": 11
+  }
+ },
+ "first_run_altered_not_passed": 30,
+ "fails": [
+  {
+   "ttb_id": "23305001000223",
+   "finding": "brand_name",
+   "observed": "RHODY COYOTE",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "23342001000282",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIR YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "label issue",
+   "note": "The label says \"IMPAIR\" instead of \"IMPAIRS\"."
+  },
+  {
+   "ttb_id": "24016001000066",
+   "finding": "warning_wording",
+   "observed": "(1)According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of  the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health  problems.",
+   "class": "checker bug",
+   "note": "No space after (1) or before (2) on the label. Spacing is layout, not wording. Fixed."
+  },
+  {
+   "ttb_id": "24103001000528",
+   "finding": "brand_name",
+   "observed": "Infiniment de l'Ou",
+   "class": "label issue",
+   "note": "The label leads with the fanciful name Infiniment de l'Ou; Chateau de l'Ou appears only in the web address. Now needs review."
+  },
+  {
+   "ttb_id": "24103001000528",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS.(2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "checker bug",
+   "note": "No space after (1) or before (2) on the label. Spacing is layout, not wording. Fixed."
+  },
+  {
+   "ttb_id": "24151001000636",
+   "finding": "warning_header_caps",
+   "observed": "GOVERNMENT WARNING",
+   "class": "label issue",
+   "note": "The heading is \"THE GOVERNMENT WARNING\" with no colon."
+  },
+  {
+   "ttb_id": "24178001000499",
+   "finding": "brand_name",
+   "observed": "EVILTWIN BREWING",
+   "class": "checker bug",
+   "note": "The logo runs the words together (EVILTWIN) and the record adds NEW YORK CITY. Fixed: words are also compared without spaces."
+  },
+  {
+   "ttb_id": "24213001000761",
+   "finding": "brand_name",
+   "observed": "MAN O' SWORD",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "24214001000412",
+   "finding": "brand_name",
+   "observed": "Martí",
+   "class": "checker bug",
+   "note": "Same name with accents; TTB's record is plain capitals. Fixed: accents are ignored."
+  },
+  {
+   "ttb_id": "24239001000401",
+   "finding": "warning_wording",
+   "observed": "(1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) The consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+   "class": "label issue",
+   "note": "The label says \"(2) The consumption\" instead of \"(2) Consumption\"."
+  },
+  {
+   "ttb_id": "24255001000235",
+   "finding": "warning_wording",
+   "observed": "(1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects.(2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+   "class": "checker bug",
+   "note": "No space after (1) or before (2) on the label. Spacing is layout, not wording. Fixed."
+  },
+  {
+   "ttb_id": "24266001000058",
+   "finding": "brand_name",
+   "observed": "BATTLE BORN",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "24268001000443",
+   "finding": "brand_name",
+   "observed": "SOMEL",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed elsewhere on the label, but the reading kept only one name. Fixed: the reading now lists the other names."
+  },
+  {
+   "ttb_id": "24324001000467",
+   "finding": "brand_name",
+   "observed": "WIND RIDGE FARMS",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "24324001000467",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "label issue",
+   "note": "The comma after \"SURGEON GENERAL\" is missing."
+  },
+  {
+   "ttb_id": "24351001000033",
+   "finding": "brand_name",
+   "observed": "Pecíolo",
+   "class": "checker bug",
+   "note": "The label says Pecíolo and TTB's record says PECIOLA. Fixed: accents are ignored, so it is now a near match that needs review."
+  },
+  {
+   "ttb_id": "25009001000284",
+   "finding": "brand_name",
+   "observed": "ACC",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed elsewhere on the label, but the reading kept only one name. Fixed: the reading now lists the other names."
+  },
+  {
+   "ttb_id": "25051001000160",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "label issue",
+   "note": "The comma after \"MACHINERY\" is missing."
+  },
+  {
+   "ttb_id": "25077001000998",
+   "finding": "brand_name",
+   "observed": "GUADALMARE",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "25176001000297",
+   "finding": "brand_name",
+   "observed": "THE SEED",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed elsewhere on the label, but the reading kept only one name. Fixed: the reading now lists the other names."
+  },
+  {
+   "ttb_id": "25176001000731",
+   "finding": "brand_name",
+   "observed": "R. O'Neill Latta",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "25179001000102",
+   "finding": "brand_name",
+   "observed": "1840",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "25179001000110",
+   "finding": "warning_wording",
+   "observed": "(1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects.(2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+   "class": "checker bug",
+   "note": "No space after (1) or before (2) on the label. Spacing is layout, not wording. Fixed."
+  },
+  {
+   "ttb_id": "25204001000531",
+   "finding": "brand_name",
+   "observed": "DUTCHESS ALES",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed elsewhere on the label, but the reading kept only one name. Fixed: the reading now lists the other names."
+  },
+  {
+   "ttb_id": "25212001000102",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "label issue",
+   "note": "The period after \"BIRTH DEFECTS\" is missing."
+  },
+  {
+   "ttb_id": "25225001000175",
+   "finding": "brand_name",
+   "observed": "PICARD Jean-Paul",
+   "class": "checker bug",
+   "note": "Same words in another order (PICARD Jean-Paul). Fixed: needs review."
+  },
+  {
+   "ttb_id": "25225001000564",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ACOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "label issue",
+   "note": "The label misspells \"ALCOHOLIC\" as \"ACOHOLIC\"."
+  },
+  {
+   "ttb_id": "25247001000267",
+   "finding": "brand_name",
+   "observed": "HOLY GHOST",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed in the bottler statement. Fixed: needs review when the brand appears elsewhere."
+  },
+  {
+   "ttb_id": "25364001000103",
+   "finding": "brand_name",
+   "observed": "Dancing Gnome",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed elsewhere on the label, but the reading kept only one name. Fixed: the reading now lists the other names."
+  },
+  {
+   "ttb_id": "26007001000128",
+   "finding": "warning_wording",
+   "observed": "(1)ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2)CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "checker bug",
+   "note": "No space after (1) or before (2) on the label. Spacing is layout, not wording. Fixed."
+  },
+  {
+   "ttb_id": "26072001000377",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOL BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "label issue",
+   "note": "The label says \"ALCOHOL BEVERAGES\" instead of \"ALCOHOLIC BEVERAGES\"."
+  },
+  {
+   "ttb_id": "26208001000183",
+   "finding": "warning_wording",
+   "observed": "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHIN-ERY, AND MAY CAUSE HEALTH PROBLEMS",
+   "class": "label issue",
+   "note": "The final period is missing. The hyphen in MACHIN-ERY is a line break, which is now ignored."
+  },
+  {
+   "ttb_id": "26235001000098",
+   "finding": "brand_name",
+   "observed": "Confluence",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed elsewhere on the label, but the reading kept only one name. Fixed: the reading now lists the other names."
+  },
+  {
+   "ttb_id": "26243001000631",
+   "finding": "brand_name",
+   "observed": "ČUVAR",
+   "class": "checker bug",
+   "note": "Same name with accents; TTB's record is plain capitals. Fixed: accents are ignored."
+  },
+  {
+   "ttb_id": "26279001000464",
+   "finding": "brand_name",
+   "observed": "BLIND CORNER",
+   "class": "checker bug",
+   "note": "The label leads with another name; the brand is printed elsewhere on the label, but the reading kept only one name. Fixed: the reading now lists the other names."
+  },
+  {
+   "ttb_id": "26300001000608",
+   "finding": "warning_wording",
+   "observed": "(1)ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+   "class": "checker bug",
+   "note": "No space after (1) or before (2) on the label. Spacing is layout, not wording. Fixed."
+  }
+ ]
+}
