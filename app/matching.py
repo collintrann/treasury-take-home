@@ -19,7 +19,7 @@ import difflib
 import re
 import unicodedata
 
-from .models import ApplicationData, ExtractedLabel, FieldResult, Status, VerificationResult
+from .models import ApplicationData, ExtractedLabel, FieldResult, Status
 from .warning import FULL_TEXT, check_warning
 
 # Ratio above which two non-identical strings are "probably the same thing"
@@ -256,7 +256,7 @@ def verify(app: ApplicationData, label: ExtractedLabel) -> tuple[Status, list[Fi
             label=FIELD_LABELS["government_warning"],
             expected=FULL_TEXT,
             found=label.government_warning,
-            status=Status(w_status),
+            status=w_status,
             note=w_note,
             diff=w_diff,
         )
@@ -264,5 +264,3 @@ def verify(app: ApplicationData, label: ExtractedLabel) -> tuple[Status, list[Fi
 
     return overall_status(results), results
 
-
-__all__ = ["verify", "VerificationResult"]

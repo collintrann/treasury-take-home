@@ -9,11 +9,14 @@ the tests cover the cases agents actually care about.
 from __future__ import annotations
 
 import csv
-import math
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from app.warning import BODY  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "samples"
@@ -39,11 +42,6 @@ SERIF = _find_font("serif")
 SANS = _find_font("sans")
 SANS_BOLD = _find_font("sans_bold")
 
-BODY = (
-    "(1) According to the Surgeon General, women should not drink alcoholic beverages during "
-    "pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages "
-    "impairs your ability to drive a car or operate machinery, and may cause health problems."
-)
 
 
 @dataclass

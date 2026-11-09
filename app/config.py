@@ -20,14 +20,14 @@ def _float(name: str, default: float) -> float:
 # primary's silent mistakes (and vice versa). Different models matter: the same
 # model twice tends to make the same mistake twice. Set SECONDARY_MODEL="" to
 # run a single reader.
-PRIMARY_MODEL = os.environ.get("PRIMARY_MODEL") or os.environ.get("LABEL_MODEL") or "claude-opus-5-5"
+PRIMARY_MODEL = os.environ.get("PRIMARY_MODEL") or "claude-opus-5-5"
 SECONDARY_MODEL = os.environ.get("SECONDARY_MODEL", "claude-haiku-5-5").strip()
 
 EFFORT = os.environ.get("CLAUDE_EFFORT", "low")  # low effort = less thinking = lower latency
 
 # Hard deadline for the AI readers, which run in parallel. The stakeholder bar
 # is ~5 s end-to-end; whatever hasn't answered by now is abandoned.
-READ_DEADLINE_SECONDS = _float("READ_DEADLINE_SECONDS", _float("CLAUDE_TIMEOUT_SECONDS", 4.5))
+READ_DEADLINE_SECONDS = _float("READ_DEADLINE_SECONDS", 4.5)
 
 # Images are downscaled to this many pixels on the long edge before upload.
 # Claude's vision encoder doesn't benefit from more, and smaller = faster.

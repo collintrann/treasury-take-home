@@ -55,7 +55,7 @@ def verify_extraction(app: ApplicationData, extraction: Extraction) -> tuple[Sta
     per_reader = [verify(app, r.label)[1] for r in extraction.readings]
 
     if len(per_reader) >= 2:
-        fields = [merge_field(a, b) for a, b in zip(per_reader[0], per_reader[1])]
+        fields = [merge_field(a, b) for a, b in zip(per_reader[0], per_reader[1], strict=True)]
         return overall_status(fields), fields
 
     # Only one reader answered.

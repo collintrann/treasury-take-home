@@ -31,29 +31,33 @@ def simulated_calls():
     return calls
 
 
-def cols(row, names):
-    return dict(zip(names, row))
+def by_key(calls):
+    grouped = {}
+    for c in calls:
+        grouped.setdefault((c.run, c.label.filename), {})[c.model] = c
+    return grouped
 
 
 def test_perfect_reader_scores_perfectly():
-    row = cols(bm.model_row("faithful", [c for c in simulated_calls() if c.model == "faithful"]),
-               ["m", "ok", "lat", "budget", "exact", "silent", "bold", "verdict", "fp", "ff", "review", "cost"])
-    assert row["verdict"] == f"{len(bm.LABELS)}/{len(bm.LABELS)}"
-    assert row["fp"] == "**0**" and row["silent"].startswith("**0**")
+    st = bm.model_stats([c for c in simulated_calls() if c.model == "faithful"])
+    assert st["correct"] == st["n"] == len(bm.LABELS)
+    assert st["false_pass"] == 0 and st["silent_corrections"] == 0
 
 
 def test_silent_corrector_alone_causes_false_passes():
-    row = cols(bm.model_row("fixer", [c for c in simulated_calls() if c.model == "fixer"]),
-               ["m", "ok", "lat", "budget", "exact", "silent", "bold", "verdict", "fp", "ff", "review", "cost"])
-    assert row["fp"] != "**0**"
+    st = bm.model_stats([c for c in simulated_calls() if c.model == "fixer"])
+    assert st["silent_corrections"] == st["typo_labels"] > 0
+    assert st["false_pass"] > 0
 
 
 def test_pairing_turns_false_passes_into_reviews():
+    st = bm.pair_stats("faithful", "fixer", by_key(simulated_calls()))
+    assert st["false_pass"] == 0
+    assert st["review"] > 0
+    assert set(st["latencies"]) == {2.0}  # pair latency is the slower reader
+
+
+def test_report_rows_render():
     calls = simulated_calls()
-    by_key = {}
-    for c in calls:
-        by_key.setdefault((c.run, c.label.filename), {})[c.model] = c
-    row = cols(bm.pair_row("faithful", "fixer", by_key), ["pair", "lat", "budget", "verdict", "fp", "ff", "review", "cost"])
-    assert row["fp"] == "**0**"
-    assert int(row["review"]) > 0
-    assert row["lat"].startswith("2.0")  # pair latency = the slower reader
+    assert bm.model_row("fixer", [c for c in calls if c.model == "fixer"])[0] == "`fixer`"
+    assert bm.pair_row("faithful", "fixer", by_key(calls))[0] == "`faithful` + `fixer`"

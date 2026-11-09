@@ -13,7 +13,7 @@ deterministic, unit-tested Python - the AI model never decides pass/fail.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -93,7 +93,7 @@ class FieldResult(BaseModel):
     #   "agreed"   - both readers reached the same verdict
     #   "disputed" - one reader passed it and the other didn't -> forced to REVIEW
     #   "single"   - only one reader answered; not double-checked
-    agreement: Optional[str] = None
+    agreement: Optional[Literal["agreed", "disputed", "single"]] = None
 
 
 class VerificationResult(BaseModel):

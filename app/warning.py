@@ -11,6 +11,8 @@ from __future__ import annotations
 import difflib
 import re
 
+from .models import Status
+
 HEADER = "GOVERNMENT WARNING:"
 
 BODY = (
@@ -60,13 +62,12 @@ def word_diff(expected: str, found: str) -> list[dict]:
     return out
 
 
-def check_warning(found: str | None, header_bold: bool | None) -> tuple[str, str, list[dict] | None]:
+def check_warning(found: str | None, header_bold: bool | None) -> tuple[Status, str, list[dict] | None]:
     """Return (status, note, diff) for the warning statement.
 
-    status is one of "pass" / "review" / "fail" / "missing".
     """
     if not found or not found.strip():
-        return "missing", "No government warning was found on the label.", None
+        return Status.MISSING, "No government warning was found on the label.", None
 
     problems: list[str] = []
 
@@ -90,14 +91,14 @@ def check_warning(found: str | None, header_bold: bool | None) -> tuple[str, str
         problems.append("Warning wording differs from the required text (see highlighted words).")
 
     if problems:
-        return "fail", " ".join(problems), diff
+        return Status.FAIL, " ".join(problems), diff
 
     if header_bold is False:
-        return "fail", "'GOVERNMENT WARNING' does not appear to be in bold type.", diff
+        return Status.FAIL, "'GOVERNMENT WARNING' does not appear to be in bold type.", diff
     if header_bold is None:
         return (
-            "review",
+            Status.REVIEW,
             "Wording and capitalization are correct. Please confirm that GOVERNMENT WARNING is in bold.",
             diff,
         )
-    return "pass", "Exact match, capitalized, and bold.", diff
+    return Status.PASS, "Exact match, capitalized, and bold.", diff

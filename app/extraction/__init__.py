@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
+from typing import Literal
 
 from .. import config
 from ..models import ExtractedLabel
@@ -18,7 +19,7 @@ __all__ = ["extract", "Extraction", "Reading", "InvalidImageError", "ClaudeExtra
 @dataclass
 class Reading:
     model: str
-    role: str  # "primary" | "secondary"
+    role: Literal["primary", "secondary"]
     label: ExtractedLabel
 
 

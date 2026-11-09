@@ -14,8 +14,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
-from .extraction import InvalidImageError, extract
-from .extraction.claude_reader import ClaudeExtractionError
+from .extraction import ClaudeExtractionError, InvalidImageError, extract
 from .consensus import verify_extraction
 from .models import ApplicationData, VerificationResult
 

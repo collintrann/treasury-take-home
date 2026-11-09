@@ -128,35 +128,32 @@ def cost(call: Call) -> float:
     return (call.usage.get("input_tokens", 0) * pin + call.usage.get("output_tokens", 0) * pout) / 1e6
 
 
-def model_row(model: str, calls: list[Call]) -> list[str]:
+def model_stats(calls: list[Call]) -> dict:
+    """Score one model's calls. Every value is a number, for the report and the tests."""
     ok = [c for c in calls if c.result]
-    lat = [c.seconds for c in ok]
     warn = [c for c in ok if printed_warning(c.label)]
-    exact = sum(squash(c.result.government_warning) == printed_warning(c.label) for c in warn)
     typo = [c for c in warn if printed_warning(c.label) != FULL_TEXT and c.label.warning_header]
-    silent = sum(squash(c.result.government_warning) == FULL_TEXT for c in typo)
     bold = [c for c in warn if c.label.warning_header]
-    bold_ok = sum(c.result.warning_header_bold == c.label.header_bold for c in bold)
-    v = verdict_stats([(c.label.expected, verify(application_for(c.label), c.result)[0].value) for c in ok])
-    return [
-        f"`{model}`",
-        f"{len(ok)}/{len(calls)}",
-        f"{pct(lat, .5):.1f} / {pct(lat, .9):.1f}",
-        f"{sum(x <= BUDGET_SECONDS for x in lat) / max(1, len(lat)):.0%}",
-        f"{exact}/{len(warn)}",
-        f"**{silent}**/{len(typo)}",
-        f"{bold_ok}/{len(bold)}",
-        f"{v['correct']}/{v['n']}",
-        f"**{v['false_pass']}**",
-        str(v["false_fail"]),
-        str(v["review"]),
-        f"{statistics.mean(cost(c) for c in ok) * 100:.2f}¢" if ok else "-",
-    ]
+    verdicts = [(c.label.expected, verify(application_for(c.label), c.result)[0].value) for c in ok]
+    return {
+        "ok": len(ok),
+        "calls": len(calls),
+        "latencies": [c.seconds for c in ok],
+        "warnings": len(warn),
+        "warning_exact": sum(squash(c.result.government_warning) == printed_warning(c.label) for c in warn),
+        "typo_labels": len(typo),
+        "silent_corrections": sum(squash(c.result.government_warning) == FULL_TEXT for c in typo),
+        "bold_labels": len(bold),
+        "bold_right": sum(c.result.warning_header_bold == c.label.header_bold for c in bold),
+        "cents": [cost(c) * 100 for c in ok],
+        **verdict_stats(verdicts),
+    }
 
 
-def pair_row(primary: str, secondary: str, by_key: dict) -> list[str]:
-    lat, verdicts, cents = [], [], []
-    for (run, fname), calls in by_key.items():
+def pair_stats(primary: str, secondary: str, by_key: dict) -> dict:
+    """Score a primary+secondary pairing using the app's own consensus rules."""
+    latencies, verdicts, cents = [], [], []
+    for calls in by_key.values():
         a, b = calls.get(primary), calls.get(secondary)
         readings = []
         if a and a.result:
@@ -168,19 +165,37 @@ def pair_row(primary: str, secondary: str, by_key: dict) -> list[str]:
         label = (a or b).label
         overall, _ = verify_extraction(application_for(label), Extraction(readings))
         verdicts.append((label.expected, overall.value))
-        lat.append(max(c.seconds for c in (a, b) if c))
+        latencies.append(max(c.seconds for c in (a, b) if c))
         cents.append(sum(cost(c) for c in (a, b) if c) * 100)
-    v = verdict_stats(verdicts)
+    return {"latencies": latencies, "cents": cents, **verdict_stats(verdicts)}
+
+
+def _latency_cells(latencies: list[float]) -> list[str]:
+    within = sum(x <= BUDGET_SECONDS for x in latencies) / max(1, len(latencies))
+    return [f"{pct(latencies, .5):.1f} / {pct(latencies, .9):.1f}", f"{within:.0%}"]
+
+
+def _verdict_cells(st: dict) -> list[str]:
+    cost_cell = f"{statistics.mean(st['cents']):.2f}¢" if st["cents"] else "-"
+    return [f"{st['correct']}/{st['n']}", f"**{st['false_pass']}**", str(st["false_fail"]), str(st["review"]), cost_cell]
+
+
+def model_row(model: str, calls: list[Call]) -> list[str]:
+    st = model_stats(calls)
     return [
-        f"`{primary}` + `{secondary}`",
-        f"{pct(lat, .5):.1f} / {pct(lat, .9):.1f}",
-        f"{sum(x <= BUDGET_SECONDS for x in lat) / max(1, len(lat)):.0%}",
-        f"{v['correct']}/{v['n']}",
-        f"**{v['false_pass']}**",
-        str(v["false_fail"]),
-        str(v["review"]),
-        f"{statistics.mean(cents):.2f}¢" if cents else "-",
+        f"`{model}`",
+        f"{st['ok']}/{st['calls']}",
+        *_latency_cells(st["latencies"]),
+        f"{st['warning_exact']}/{st['warnings']}",
+        f"**{st['silent_corrections']}**/{st['typo_labels']}",
+        f"{st['bold_right']}/{st['bold_labels']}",
+        *_verdict_cells(st),
     ]
+
+
+def pair_row(primary: str, secondary: str, by_key: dict) -> list[str]:
+    st = pair_stats(primary, secondary, by_key)
+    return [f"`{primary}` + `{secondary}`", *_latency_cells(st["latencies"]), *_verdict_cells(st)]
 
 
 def table(header: list[str], rows: list[list[str]]) -> str:
