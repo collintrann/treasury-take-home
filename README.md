@@ -123,7 +123,7 @@ Set in `.env`. Only the API key is required.
 ## Limitations
 
 - Measured on a handful of generated labels only (3.3 to 6.4 s per label). The benchmark hasn't been run.
-- The first check after the reading schema changes takes about a minute while the API prepares it. Later checks are fast.
+- The first read after the reading schema changes takes about a minute while the API prepares it. The service does one read of a sample label at startup, so agents don't wait for it.
 - Test labels are generated, not real photos.
 - Only alcohol content and country of origin vary by product type. Other beverage-specific rules are not implemented (see `docs/DESIGN.md`).
 - Batch review is not implemented beyond the simulated queue.

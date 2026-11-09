@@ -6,6 +6,7 @@ The readers are scripted stand-ins, so the suite needs no API key and no network
 import asyncio
 import io
 import re
+import time
 from pathlib import Path
 
 import pytest
@@ -327,3 +328,22 @@ def test_ui_source_never_mentions_internals():
         strings = re.findall(r"`[^`]*`|\"[^\"]*\"|'[^']*'", code)
         for text in [*jsx_text, *strings]:
             assert not re.search(r"\b(AI|OCR|Claude|Opus|Haiku|Sonnet|model|models)\b", text), f"{source.name}: {text}"
+
+
+def test_startup_reads_one_label_with_each_model(monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(config, "claude_configured", lambda: True)
+    calls = []
+
+    async def fake(jpeg, model, usage=None, timeout=None):
+        calls.append((model, timeout))
+        return ExtractedLabel(image_readable=True)
+
+    monkeypatch.setattr(main_module, "extract_with_claude", fake)
+    with TestClient(app):
+        deadline = time.monotonic() + 2
+        while len(calls) < len(config.reader_models()) and time.monotonic() < deadline:
+            time.sleep(0.05)  # the warm-up runs in the background on the server's event loop
+    assert [m for m, _ in calls] == [m for m, _ in config.reader_models()]
+    assert all(t == main_module.WARM_UP_TIMEOUT_SECONDS for _, t in calls)

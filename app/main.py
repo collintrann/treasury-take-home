@@ -8,6 +8,8 @@ import secrets
 import time
 from typing import get_args
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
@@ -15,6 +17,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from . import config
 from .consensus import decide
 from .extraction import ClaudeExtractionError, InvalidImageError, extract
+from .extraction.claude_reader import extract_with_claude
+from .extraction.image import load_image, to_upload_jpeg
 from .models import Application, CheckResult, ProductType, QueueDetail, QueueEntry, QueueItem
 from .queue import QUEUE_DIR, SAMPLES_DIR, as_detail, as_item, load_queue
 
@@ -25,7 +29,39 @@ PRODUCT_TYPES: tuple[str, ...] = get_args(ProductType)
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 UNAVAILABLE = "We couldn't read this label right now. Please try again in a minute."
 
-app = FastAPI(title="Label Check", docs_url="/api/docs", redoc_url=None)
+# The API prepares each new response format the first time it sees it, which
+# took about a minute when measured. Reading one sample label at startup pays
+# that cost before an agent's first check would hit the deadline.
+WARM_UP_TIMEOUT_SECONDS = 180
+
+
+async def _warm_up() -> None:
+    entry = next(iter(load_queue().values()), None)
+    if entry is None:
+        return
+    jpeg = to_upload_jpeg(load_image((QUEUE_DIR / entry.image).read_bytes()))
+    for model, _ in config.reader_models():
+        started = time.perf_counter()
+        try:
+            await extract_with_claude(jpeg, model, timeout=WARM_UP_TIMEOUT_SECONDS)
+            log.info("warm-up read with %s took %.1f s", model, time.perf_counter() - started)
+        except ClaudeExtractionError as exc:
+            log.warning("warm-up read with %s failed: %s", model, exc)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    task = asyncio.create_task(_warm_up()) if config.claude_configured() else None
+    if task:
+        task.add_done_callback(
+            lambda t: t.cancelled() or t.exception() is None or log.error("warm-up crashed: %r", t.exception())
+        )
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="Label Check", docs_url="/api/docs", redoc_url=None, lifespan=lifespan)
 
 # Caps simultaneous checks so a burst of requests can't exhaust API rate
 # limits or the box's CPU. Extra requests wait their turn.

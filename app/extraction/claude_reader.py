@@ -52,10 +52,13 @@ def _get_client() -> anthropic.AsyncAnthropic:
     return _client
 
 
-async def extract_with_claude(jpeg: bytes, model: str, usage: dict | None = None) -> ExtractedLabel:
+async def extract_with_claude(
+    jpeg: bytes, model: str, usage: dict | None = None, timeout: float | None = None
+) -> ExtractedLabel:
     """Transcribe a label with ``model``. If ``usage`` is given, token counts are written into it."""
+    client = _get_client() if timeout is None else _get_client().with_options(timeout=timeout)
     try:
-        response = await _get_client().messages.parse(
+        response = await client.messages.parse(
             model=model,
             max_tokens=4096,
             system=SYSTEM_PROMPT,

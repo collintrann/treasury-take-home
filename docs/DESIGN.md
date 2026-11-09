@@ -77,7 +77,7 @@ The brief asks for about 5 seconds per label.
 - Both readers run at once. Low thinking effort and downscaled images keep calls short.
 - Measured on four queue labels through the API: 3.3, 3.6, 4.4 and 6.4 seconds. The slowest was the blurry photo.
 - A 15 second cutoff drops a reader that hangs. It is a guard, not the target.
-- The first request after the reading schema changes took about 60 seconds for both models, while the API prepared the schema. The next took 3 to 4 seconds. A deployment should send one check after each release so agents never see that wait.
+- The first request after the reading schema changes took about 60 seconds for both models, while the API prepared the schema. The next took 3 to 4 seconds. The service reads one sample label with each model when it starts, with a 3-minute limit, so that wait happens before any agent's first check.
 
 ## Review queue
 
