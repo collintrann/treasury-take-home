@@ -24,8 +24,11 @@ pytest
 
 ## Code
 
+- `app/models.py` holds the API's request and response shapes. The web page mirrors them.
 - `app/extraction/` reads the label with two models under a time limit.
 - `app/matching.py` and `app/warning.py` decide each result. The AI never does.
-- `app/consensus.py` combines the two readings.
+- `app/consensus.py` combines the two readings and decides the overall result.
+- `app/queue.py` serves the simulated review queue from `samples/queue/applications.json`.
+- `scripts/generate_samples.py` draws the queue. Rerun it after changing it; a test catches drift.
 - `app/main.py` holds the API routes.
-- `web/` is the Next.js page. Fields live in `web/lib/fields.ts`.
+- `web/` is the Next.js page.
